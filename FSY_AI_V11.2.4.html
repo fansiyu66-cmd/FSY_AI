@@ -1,0 +1,2815 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FSY AI 助手 V11.2.4（流式长任务稳定版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github-dark.min.css" id="hljs-dark">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github.min.css" id="hljs-light" disabled>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/lib/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --bg2: #ffffff;
+            --bg3: #f1f5f9;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text2: #475569;
+            --text3: #94a3b8;
+            --accent: #4f46e5;
+            --accent2: #0ea5e9;
+            --user-bg: #4f46e5;
+            --user-text: #fff;
+            --danger: #ef4444;
+            --ok: #16a34a;
+            --shadow: 0 1px 3px rgba(0,0,0,.06);
+        }
+        html.dark {
+            --bg: #0f172a;
+            --bg2: #1e293b;
+            --bg3: #334155;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text2: #cbd5e1;
+            --text3: #64748b;
+            --accent: #818cf8;
+            --accent2: #38bdf8;
+            --user-bg: #4f46e5;
+            --user-text: #fff;
+            --danger: #f87171;
+            --ok: #4ade80;
+            --shadow: 0 1px 3px rgba(0,0,0,.3);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; min-width: 0; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; min-height: 100vh; display: flex; overflow: hidden; overscroll-behavior: none; }
+        /* Sidebar */
+        #sidebar { width: 300px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: margin .25s ease, transform .25s ease; z-index: 40; }
+        #sidebar.collapsed { margin-left: -300px; }
+        #side-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 35; }
+        #side-overlay.show { display: block; }
+        .side-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 15px; color: var(--accent); }
+        .side-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; font-size: 12px; }
+        .side-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+        label.field-label { display: block; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+        input, select, textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--text); outline: none; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 56px; }
+        .row-2 { display: flex; gap: 8px; }
+        .row-2 > * { flex: 1; }
+        .chip-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+        .chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; cursor: pointer; color: var(--text2); }
+        .chip:hover, .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn { border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: .15s; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { filter: brightness(1.08); }
+        .btn-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        html.dark .btn-ok { background: #14532d; color: #86efac; border-color: #166534; }
+        .btn-warn { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        html.dark .btn-warn { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
+        .hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
+        .model-tools { display:flex; gap:6px; align-items:center; margin-top:6px; }
+        .model-tools .btn { flex:0 0 auto; padding:6px 9px; font-size:11px; }
+        .model-status { flex:1; min-width:0; font-size:10px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .model-status.ok { color:var(--ok); }
+        .model-status.err { color:var(--danger); }
+        /* Sessions */
+        .session-block { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 4px; }
+        .session-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .session-head .field-label { margin: 0; }
+        #session-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+        .session-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; background: var(--bg3); }
+        .session-item:hover { border-color: var(--border); }
+        .session-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg3)); }
+        .session-item .s-title { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-item .s-del { opacity: 0.45; border: none; background: transparent; cursor: pointer; font-size: 13px; color: var(--text3); padding: 0 2px; line-height: 1; }
+        .session-item:hover .s-del, .session-item.active .s-del { opacity: 1; }
+        .session-item .s-del:hover { color: var(--danger); }
+        .btn-new-session { width: 100%; margin-top: 6px; font-size: 12px; padding: 7px 10px; }
+        #session-title-bar { font-size: 12px; color: var(--text3); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Main */
+        #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+        #topbar { height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0; min-width: 0; contain: layout paint; }
+        .top-left { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; }
+        .top-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; min-width: max-content; white-space: nowrap; }
+        .icon-btn { background: transparent; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; flex: 0 0 auto; }
+        .icon-btn:hover { background: var(--bg3); color: var(--text); }
+        .model-badge { flex: 1 1 auto; min-width: 0; max-width: 100%; font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: 0 0 8px; }
+        .status-dot.busy { background: #f59e0b; animation: pulse 1s infinite; }
+        .status-dot.err { background: var(--danger); }
+        @keyframes pulse { 50% { opacity: .4; } }
+        #status-text { display: block; flex: 0 0 auto; width: auto; min-width: 2em; font-size: 12px; line-height: 1; color: var(--text3); white-space: nowrap; }
+        #session-title-bar { flex: 0 1 140px; min-width: 0; }
+        #chatbox { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; contain: layout style; }
+        #chatbox { scrollbar-gutter: stable; }
+        #scroll-bottom-btn { position: absolute; right: 18px; bottom: 92px; z-index: 12; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); box-shadow: 0 4px 14px rgba(0,0,0,.14); cursor: pointer; display: none; align-items: center; justify-content: center; font-size: 16px; transition: opacity .15s, transform .15s, background .15s; }
+        #scroll-bottom-btn.show { display: flex; }
+        #scroll-bottom-btn:hover { background: var(--bg3); color: var(--accent); transform: translateY(-1px); }
+        .empty-hint { text-align: center; color: var(--text3); margin: auto; font-size: 14px; padding: 40px 20px; }
+        .msg-row { display: flex; gap: 10px; max-width: 880px; width: 100%; margin: 0 auto; }
+        .msg-row.user { flex-direction: row-reverse; }
+        .avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+        .user .avatar { background: var(--user-bg); color: var(--user-text); }
+        .bot .avatar { background: var(--accent2); color: #fff; }
+        .bubble-wrap { display: flex; flex-direction: column; gap: 4px; max-width: calc(100% - 44px); min-width: 0; }
+        .bubble { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.6; word-break: break-word; box-shadow: var(--shadow); }
+        .user .bubble { background: var(--user-bg); color: var(--user-text); border: none; border-bottom-right-radius: 4px; }
+        .bot .bubble { border-bottom-left-radius: 4px; }
+        .msg-img { max-width: 240px; max-height: 240px; border-radius: 8px; margin-bottom: 6px; display: block; }
+        .doc-badge { display: inline-flex; align-items: center; gap: 4px; background: #e0e7ff; color: #3730a3; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+        html.dark .doc-badge { background: #312e81; color: #c7d2fe; }
+        .img-placeholder { background: var(--bg3); color: var(--text3); padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px dashed var(--border); margin-bottom: 6px; }
+        .msg-actions { display: flex; gap: 6px; font-size: 11px; opacity: 0; transition: opacity .15s; }
+        .bot:hover .msg-actions, .msg-actions.show { opacity: 1; }
+        .action-link { color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: var(--bg3); }
+        .action-link:hover { color: var(--accent); }
+        .reasoning-box { background: var(--bg3); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: var(--text2); }
+        .reasoning-box summary { cursor: pointer; font-weight: 600; color: var(--accent); user-select: none; }
+        .reasoning-text { font-size: 12px; margin-top: 6px; overflow-x: auto; }
+        .bubble pre { background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 8px; overflow-x: auto; position: relative; font-size: 13px; margin: 8px 0; }
+        html:not(.dark) .bubble pre { background: #1e293b; }
+        .btn-group-code { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+        .copy-btn, .preview-btn { background: rgba(255,255,255,.2); color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
+        .copy-btn:hover, .preview-btn:hover { background: rgba(255,255,255,.35); }
+        .preview-btn { background: #0ea5e9; }
+        .typing::after { content: "▌"; color: var(--accent); animation: blink .8s infinite; margin-left: 2px; }
+        @keyframes blink { 50% { opacity: 0; } }
+        /* Input area */
+        #input-area { background: var(--bg2); border-top: 1px solid var(--border); padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; contain: layout paint; }
+        #preview-bar { display: none; align-items: center; gap: 8px; background: var(--bg3); padding: 6px 10px; border-radius: 8px; width: fit-content; margin-bottom: 8px; }
+        #preview-bar img { height: 40px; width: 40px; object-fit: cover; border-radius: 4px; }
+        #preview-content { min-width: 0; max-width: min(72vw, 520px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+        #preview-content img { flex: 0 0 auto; }
+        /* WebToApp 的性能注入会给 main 下面的容器设置 content-visibility:auto。
+           聊天滚动容器不适合这个策略，否则动态流式追加内容时可能出现高度/滚动位置跳动。 */
+        #chatbox, #input-area { content-visibility: visible !important; contain: layout style !important; }
+        #sidebar { content-visibility: visible !important; }
+        .rm-attach { background: var(--danger); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; line-height: 1; }
+        .input-row { display: flex; gap: 8px; align-items: flex-end; max-width: 880px; width: 100%; min-width: 0; margin: 0 auto; }
+        #text-input { flex: 1 1 auto; min-width: 0; width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 14px; outline: none; resize: none; min-height: 42px; max-height: 140px; line-height: 1.4; color: var(--text); font-family: inherit; }
+        #text-input:focus { border-color: var(--accent); }
+        .btn-attach, .btn-send { width: 42px; height: 42px; border-radius: 10px; border: none; cursor: pointer; flex-shrink: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        .btn-attach { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+        .btn-attach:hover { background: var(--border); }
+        .btn-send { background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; width: auto; padding: 0 16px; }
+        .btn-send.stop { background: var(--danger); }
+        .perf-bar { text-align:center; font-size:10px; color:var(--text3); min-height:14px; margin-top:3px; }
+        .budget-meter { margin-top:7px; padding:7px 9px; border-radius:7px; background:var(--bg3); color:var(--text3); font-size:10px; line-height:1.5; }
+        .budget-meter.warn { color:#b45309; }
+        html.dark .budget-meter.warn { color:#fbbf24; }
+        .model-cap-row { margin-top:5px; display:flex; gap:4px; flex-wrap:wrap; }
+        .cap-chip { font-size:10px; padding:2px 6px; border-radius:5px; background:var(--bg3); color:var(--text3); border:1px solid var(--border); }
+        .footer-hint { text-align: center; font-size: 11px; color: var(--text3); margin-top: 6px; }
+        /* Preview Modal */
+        #code-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; justify-content: center; align-items: center; }
+        .preview-box { background: #fff; width: 90%; height: 85%; max-width: 1000px; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .preview-header { padding: 10px 16px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .preview-iframe { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
+        /* Modal */
+        #attach-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; justify-content: center; align-items: center; }
+        .modal-box { background: var(--bg2); width: 90%; max-width: 360px; border-radius: 14px; padding: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.2); display: flex; flex-direction: column; gap: 10px; }
+        .modal-title { font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; }
+        .modal-close { cursor: pointer; color: var(--text3); font-size: 18px; }
+        .attach-opt { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; }
+        .attach-opt:hover { border-color: var(--accent); }
+        /* Mobile */
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); margin-left: 0 !important; box-shadow: 4px 0 24px rgba(0,0,0,.2); }
+            #sidebar.open { transform: translateX(0); }
+            #sidebar.collapsed { margin-left: 0; transform: translateX(-100%); }
+            #topbar { padding-left: 8px; padding-right: 8px; gap: 6px; }
+            .top-left { gap: 6px; }
+            .top-right { gap: 6px; }
+            .model-badge { font-size: 12.5px; }
+            #session-title-bar { flex-basis: 92px; }
+            .msg-actions { opacity: 1; }
+            #close-side-btn { display: inline-flex !important; }
+            #scroll-bottom-btn { right: 12px; bottom: 88px; }
+        }
+        @media (max-width: 520px) {
+            #session-title-bar { display: none; }
+            #status-text { font-size: 11px; }
+            #chatbox { padding-left: 10px; padding-right: 10px; gap: 12px; }
+            #input-area { padding-left: 8px; padding-right: 8px; }
+            .input-row { gap: 6px; }
+            #preview-content { max-width: calc(100vw - 100px); }
+        }
+        @media (max-width: 390px) {
+            #status-text { display: none; }
+            .top-right { gap: 2px; }
+            .btn-send { padding-left: 12px; padding-right: 12px; }
+            .btn-attach { width: 40px; }
+            #text-input { font-size: 14px; }
+        }
+        @media (min-width: 769px) {
+            #side-overlay { display: none !important; }
+            #close-side-btn { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="side-overlay"></div>
+    <aside id="sidebar">
+        <div class="side-header">
+            <span>⚙️ 设置</span>
+            <button class="icon-btn" id="close-side-btn" title="关闭" type="button">✕</button>
+        </div>
+        <div class="side-body">
+            <div class="session-block">
+                <div class="session-head">
+                    <label class="field-label">会话</label>
+                    <span class="hint" id="session-count">0</span>
+                </div>
+                <div id="session-list"></div>
+                <button type="button" class="btn btn-ghost btn-new-session" onclick="newSession()">＋ 新对话</button>
+            </div>
+            <div>
+                <label class="field-label">接口预设</label>
+                <select id="base-url-select">
+                    <option value="https://api.deepseek.com">DeepSeek 官方</option>
+                    <option value="https://api.siliconflow.cn/v1">硅基流动</option>
+                    <option value="https://openrouter.ai/api/v1">OpenRouter</option>
+                    <option value="https://api.openai.com/v1">OpenAI 官方</option>
+                    <option value="custom">自定义</option>
+                </select>
+            </div>
+            <div id="custom-url-wrap" style="display:none;">
+                <label class="field-label">自定义 Base URL</label>
+                <input type="text" id="custom-base-url" placeholder="https://api.xxx.com/v1">
+            </div>
+            <div>
+                <label class="field-label">API Key <span id="key-provider-hint" style="font-weight:500;color:var(--accent);">(当前供应商)</span></label>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <input type="password" id="api-key" placeholder="sk-... 切换供应商会自动切换已存 Key" style="flex:1;">
+                    <button class="icon-btn" type="button" onclick="toggleKeyVis()" title="显示/隐藏">👁️</button>
+                </div>
+                <div class="hint">各供应商 Key 分开记忆：DeepSeek / 硅基 / OpenRouter / OpenAI / 自定义 互不覆盖</div>
+            </div>
+            <div>
+                <label class="field-label">模型预设</label>
+                <select id="model-select"></select>
+                <div class="model-tools">
+                    <button type="button" class="btn btn-ghost" id="refresh-models-btn" onclick="fetchModels({force:true})">↻ 获取模型</button>
+                    <span class="model-status" id="model-status">使用预设模型；有 Key 后自动同步</span>
+                </div>
+                <input type="text" id="model-manual" placeholder="或手动输入模型 ID" style="margin-top:6px;" title="优先使用手动输入（非空时）">
+                <div class="hint">优先使用手动 ID；模型列表会从当前接口 /models 自动获取并缓存</div>
+            </div>
+            <div>
+                <label class="field-label">思考/深度推理强度 (Reasoning Effort)</label>
+                <select id="reasoning-effort-select">
+                    <option value="default">默认 (Auto)</option>
+                    <option value="none">无思考 (Non-think / 极速)</option>
+                    <option value="low">低强度 (Low)</option>
+                    <option value="high">高强度 (High / 深度推理)</option>
+                    <option value="max">最大强度 (Max)</option>
+                </select>
+                <div class="hint">不同供应商参数不同；Qwen3.8-27B（硅基）使用 thinking_budget，范围 128–32768。Max Tokens 是最终输出上限，不等于思考预算。</div>
+            </div>
+            <div>
+                <label class="field-label">系统提示词</label>
+                <textarea id="system-prompt">你是一个高智商、友好且精通各领域的 AI 助手。</textarea>
+                <button class="chip" style="margin-top:4px;" onclick="resetSys()">重置默认</button>
+            </div>
+            <div>
+                <label class="field-label">最大 Tokens (Max Tokens)</label>
+                <input type="number" id="max-tokens" value="8192" min="256" max="393216" step="256">
+                <div class="chip-row">
+                    <span class="chip token-chip" data-v="2048">2K</span>
+                    <span class="chip token-chip" data-v="4096">4K</span>
+                    <span class="chip token-chip active" data-v="8192">8K</span>
+                    <span class="chip token-chip" data-v="16384">16K</span>
+                    <span class="chip token-chip" data-v="32768">32K</span>
+                    <span class="chip token-chip" data-v="65536">64K</span>
+                    <span class="chip token-chip" data-v="131072">128K</span>
+                    <span class="chip token-chip" data-v="262144">256K</span>
+                    <span class="chip token-chip" data-v="393216">384K</span>
+                </div>
+                <div class="budget-meter" id="budget-meter">🧠 预算：等待模型能力检测</div>
+            </div>
+            <div class="row-2">
+                <div>
+                    <label class="field-label">历史轮数</label>
+                    <input type="number" id="max-turns" value="10" min="1" max="50">
+                </div>
+                <div>
+                    <label class="field-label">图片保留</label>
+                    <input type="number" id="max-img-turns" value="2" min="0" max="8" title="最近几轮用户消息保留完整图片">
+                </div>
+            </div>
+            <div class="row-2" style="margin-top:2px;">
+                <button type="button" class="btn btn-ghost" id="compact-context-btn" title="把较旧对话压缩成摘要，原始聊天记录不会删除">🧠 压缩上下文</button>
+                <button type="button" class="btn btn-ghost" id="clear-context-summary-btn" title="仅删除上下文摘要，原始聊天记录保留">↺ 清除摘要</button>
+            </div>
+            <div class="hint" id="context-summary-status">上下文压缩：未启用</div>
+            <div>
+                <label class="field-label">Temperature <span id="temp-val" style="color:var(--accent);font-weight:700;">0.7</span></label>
+                <input type="range" id="temp" min="0" max="1.5" step="0.1" value="0.7" style="width:100%;accent-color:var(--accent);">
+            </div>
+            <div>
+                <label class="field-label">主题</label>
+                <div class="chip-row">
+                    <span class="chip theme-chip active" data-t="light">☀️ 浅色</span>
+                    <span class="chip theme-chip" data-t="dark">🌙 深色</span>
+                    <span class="chip theme-chip" data-t="system">💻 跟随系统</span>
+                </div>
+            </div>
+        </div>
+        <div class="side-footer">
+            <button class="btn btn-ghost" id="test-btn" onclick="testConnection()">🧪 测试连通</button>
+            <button class="btn btn-ok" id="save-toggle-btn" onclick="toggleSave()">💾 已保存配置</button>
+            <button class="btn btn-ghost" onclick="exportConfig()">📤 导出配置</button>
+            <button class="btn btn-ghost" onclick="importConfig()">📥 导入配置</button>
+            <button class="btn btn-ghost" onclick="exportMarkdown()">📄 导出 Markdown</button>
+            <button class="btn btn-danger" onclick="clearHistory()">🗑️ 清空当前会话</button>
+        </div>
+    </aside>
+
+    <main id="main">
+        <header id="topbar">
+            <div class="top-left">
+                <button class="icon-btn" id="menu-btn" title="设置">☰</button>
+                <span class="status-dot" id="status-dot"></span>
+                <span class="model-badge" id="model-badge">deepseek-flash</span>
+                <span id="session-title-bar" title="当前会话"></span>
+            </div>
+            <div class="top-right">
+                <span id="status-text">就绪</span>
+                <button class="icon-btn" id="theme-quick" title="切换主题">🌓</button>
+            </div>
+        </header>
+
+        <div id="chatbox">
+            <div class="empty-hint" id="empty-hint">开始一次新的对话吧</div>
+        </div>
+        <button id="scroll-bottom-btn" type="button" title="回到底部" aria-label="回到底部">↓</button>
+
+        <div id="input-area">
+            <div id="preview-bar">
+                <div id="preview-content"></div>
+                <button class="rm-attach" onclick="clearAttachment()">×</button>
+            </div>
+            <div class="input-row">
+                <button class="btn-attach" onclick="openAttachModal()" title="附件">📎</button>
+                <textarea id="text-input" rows="1" placeholder="输入消息… (Shift+Enter 换行)"></textarea>
+                <button class="btn-send" id="send-btn" onclick="handleSendOrStop()">发送</button>
+            </div>
+            <div id="perf-bar" class="perf-bar">就绪</div>
+            <div class="footer-hint">AI 可能出错，重要信息请核实 · FSY AI V11.2.4 · 长流式请求保护 + Qwen3.8 思考预算修复 + Preview Engine + Context Compaction</div>
+        </div>
+    </main>
+
+    <!-- HTML 预览弹窗 -->
+    <div id="code-modal" onclick="if(event.target===this)closePreviewModal()">
+        <div class="preview-box">
+            <div class="preview-header">
+                <span>🎨 2D SVG/HTML 实时预览</span>
+                <button class="icon-btn" style="color:#fff;" onclick="closePreviewModal()">✕</button>
+            </div>
+            <iframe id="preview-frame" class="preview-iframe" title="HTML 实时预览"></iframe>
+        </div>
+    </div>
+
+    <div id="attach-modal" onclick="if(event.target===this)closeAttachModal()">
+        <div class="modal-box">
+            <div class="modal-title"><span>📎 导入附件</span><span class="modal-close" onclick="closeAttachModal()">×</span></div>
+            <button class="attach-opt" onclick="triggerFile('image/*')">🖼️ 上传本地图片</button>
+            <button class="attach-opt" onclick="triggerFile('.txt,.md,.py,.js,.json,.html,.css,.csv,.xml,.java,.c,.cpp')">📄 上传文档 / 代码</button>
+            <button class="attach-opt" onclick="importImageLink()">🔗 网络图片 URL</button>
+        </div>
+    </div>
+    <input type="file" id="file-input" style="display:none;" onchange="onFilePicked(event)">
+
+<script>
+const MODEL_PRESETS = {
+    "https://api.deepseek.com": [
+        { value: "deepseek-flash", label: "deepseek-flash (V4.1 极速 / 推荐)" },
+        { value: "deepseek-v4-pro", label: "deepseek-v4-pro (旗舰推理)" }
+    ],
+    "https://api.siliconflow.cn/v1": [
+        { value: "deepseek-ai/DeepSeek-V4-Flash", label: "DeepSeek-V4-Flash (极速)" },
+        { value: "deepseek-ai/DeepSeek-V4-Pro", label: "DeepSeek-V4-Pro (旗舰)" },
+        { value: "deepseek-ai/DeepSeek-V3", label: "DeepSeek-V3" },
+        { value: "deepseek-ai/DeepSeek-R1", label: "DeepSeek-R1" },
+        { value: "zai-org/GLM-5.3", label: "GLM-5.3" },
+        { value: "zai-org/GLM-4-9B-Chat", label: "GLM-4-9B" },
+        { value: "Qwen/Qwen3.8-27B", label: "Qwen3.8-27B" },
+        { value: "Qwen/Qwen2.5-72B-Instruct", label: "Qwen2.5-72B" },
+        { value: "Tongyi-MAI/Z-Image-Turbo", label: "Z-Image-Turbo（生图）" },
+        { value: "Qwen/Qwen-Image-Edit-2509", label: "Qwen-Image-Edit（修图）" }
+    ],
+    "https://openrouter.ai/api/v1": [
+        { value: "deepseek/deepseek-v4-pro", label: "DeepSeek-V4-Pro" },
+        { value: "deepseek/deepseek-v4-flash", label: "DeepSeek-V4-Flash" },
+        { value: "deepseek/deepseek-chat", label: "deepseek-chat" },
+        { value: "deepseek/deepseek-r1", label: "deepseek-r1" },
+        { value: "openai/gpt-4o", label: "openai/gpt-4o" }
+    ],
+    "https://api.openai.com/v1": [
+        { value: "gpt-4o", label: "gpt-4o" },
+        { value: "gpt-4o-mini", label: "gpt-4o-mini" },
+        { value: "o3-mini", label: "o3-mini" },
+        { value: "o1", label: "o1" }
+    ],
+    "custom": [
+        { value: "deepseek-flash", label: "deepseek-flash" },
+        { value: "deepseek-v4-pro", label: "deepseek-v4-pro" },
+        { value: "deepseek-ai/DeepSeek-V4-Pro", label: "DeepSeek-V4-Pro" },
+        { value: "deepseek-ai/DeepSeek-V4-Flash", label: "DeepSeek-V4-Flash" },
+        { value: "deepseek-chat", label: "deepseek-chat" },
+        { value: "gpt-4o", label: "gpt-4o" }
+    ]
+};
+
+const PURIFY_CFG = {
+    ADD_TAGS: ["math","mrow","mi","mo","mn","msup","msub","mfrac","msqrt","mroot","mtable","mtr","mtd","mtext","annotation","semantics","svg","path","g","circle","rect","line","polyline","polygon","text","use","defs","clipPath","style","animate","animateTransform"],
+    ADD_ATTR: ["xmlns","display","mathvariant","stretchy","fence","separator","viewBox","d","fill","stroke","stroke-width","transform","x","y","cx","cy","r","width","height","points","attributeName","type","from","to","dur","repeatCount","values","keyTimes"]
+};
+
+/** 走 images 接口的模型，不宜用 chat/completions */
+const IMAGE_MODEL_RE = /z-image|image-edit|image-turbo|stable-diffusion|sdxl|flux\.|kolors|playground|dall-e/i;
+
+const PROVIDER_LABEL = {
+    "https://api.deepseek.com": "DeepSeek 官方",
+    "https://api.siliconflow.cn/v1": "硅基流动",
+    "https://openrouter.ai/api/v1": "OpenRouter",
+    "https://api.openai.com/v1": "OpenAI",
+    "custom": "自定义"
+};
+
+function getProviderLabel() {
+    const sel = $("base-url-select").value;
+    if (sel === "custom") return "自定义";
+    return PROVIDER_LABEL[sel] || "API";
+}
+
+
+/* ==================== ProviderRegistry / ProviderAdapter ====================
+ * V10.5: provider routing is centralized. OpenAI-compatible services share one
+ * adapter; provider-specific quirks live in the adapter instead of scattered
+ * if/else branches throughout the chat engine.
+ */
+const ProviderRegistry = (() => {
+    const definitions = [
+        { id:"deepseek", match:u => /api\.deepseek\.com/i.test(u), name:"DeepSeek 官方", protocol:"openai", chatPath:"/chat/completions", modelsPath:"/models", quirks:{deepseek:true} },
+        { id:"siliconflow", match:u => /api\.siliconflow\.cn/i.test(u), name:"硅基流动", protocol:"openai", chatPath:"/chat/completions", modelsPath:"/models" },
+        { id:"openrouter", match:u => /openrouter\.ai/i.test(u), name:"OpenRouter", protocol:"openai", chatPath:"/chat/completions", modelsPath:"/models", quirks:{openrouter:true} },
+        { id:"openai", match:u => /api\.openai\.com/i.test(u), name:"OpenAI", protocol:"openai", chatPath:"/chat/completions", modelsPath:"/models" },
+        { id:"custom", match:() => true, name:"自定义", protocol:"openai", chatPath:"/chat/completions", modelsPath:"/models" }
+    ];
+    function normalizeBase(raw) {
+        let u = String(raw || "").trim().replace(/\/+$/, "");
+        if (!u) return "";
+        if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+        return u.replace(/\/chat\/completions$/i, "").replace(/\/responses$/i, "").replace(/\/models$/i, "");
+    }
+    function resolve(raw) {
+        const base = normalizeBase(raw);
+        return definitions.find(d => d.match(base)) || definitions[definitions.length-1];
+    }
+    function headers(provider, key, json=false) {
+        const h = { "Authorization":"Bearer "+key, "Accept": json ? "application/json" : "text/event-stream, application/json" };
+        if (json) h["Content-Type"] = "application/json";
+        if (provider.quirks?.openrouter) {
+            // APK 通过 file:// / Android asset 页面运行时，不要把 file:// 地址当作 Referer。
+            // OpenRouter 不需要依赖这个地址才能正常请求；HTTP 页面环境再保留真实 Referer。
+            if (/^https?:$/i.test(window.location.protocol)) h["HTTP-Referer"] = window.location.href;
+            h["X-Title"] = "FSY AI";
+        }
+        return h;
+    }
+    function endpoint(raw, kind="chat") {
+        const base = normalizeBase(raw), p = resolve(base);
+        if (!base) return "";
+        return base + (kind === "models" ? p.modelsPath : p.chatPath);
+    }
+    return { definitions, normalizeBase, resolve, headers, endpoint };
+})();
+
+const ProviderAdapter = {
+    forCurrent() {
+        const raw = $("base-url-select").value === "custom" ? $("custom-base-url").value : $("base-url-select").value;
+        const provider = ProviderRegistry.resolve(raw);
+        return {
+            provider,
+            baseUrl: ProviderRegistry.normalizeBase(raw),
+            chatEndpoint: ProviderRegistry.endpoint(raw, "chat"),
+            modelsEndpoint: ProviderRegistry.endpoint(raw, "models"),
+            headers: (key, json=false) => ProviderRegistry.headers(provider, key, json),
+            adaptModel: model => adaptModelForProvider(model, provider),
+            buildRequestBody: ({model,msgs,maxTokens,temp,reasoningEffort,supportsReasoning,tokenParameter,reasoningParameter}) => {
+                const body = { model, messages:msgs, stream:true };
+                body[tokenParameter || "max_tokens"] = maxTokens;
+                const lower = String(model || "").toLowerCase();
+                const isSiliconQwen38 = provider.id === "siliconflow" && /qwen\/?qwen3\.8-27b/i.test(lower);
+                const noTemp = /^(o1|o3|o4)|reasoner/i.test(lower) || provider.quirks?.deepseek && reasoningEffort !== "none";
+                if (!noTemp) body.temperature = temp;
+                if (provider.quirks?.deepseek) {
+                    body.extra_body = { thinking:{ type:reasoningEffort === "none" ? "disabled" : "enabled" } };
+                    if (reasoningEffort !== "default" && reasoningEffort !== "none") body[reasoningParameter || "reasoning_effort"] = reasoningEffort;
+                } else if (isSiliconQwen38 && supportsReasoning) {
+                    // SiliconFlow 官方接口使用 enable_thinking / thinking_budget 控制推理。
+                    // Qwen3.8-27B 默认可能进入很重的 xhigh 思考；给它明确的预算上限。
+                    if (reasoningEffort === "none") {
+                        body.enable_thinking = false;
+                    } else {
+                        const budget = reasoningEffort === "low" ? 8192 : 32768;
+                        body.enable_thinking = true;
+                        body.thinking_budget = budget;
+                    }
+                } else if (supportsReasoning && reasoningEffort && reasoningEffort !== "default" && reasoningEffort !== "none" && reasoningParameter) {
+                    body[reasoningParameter] = reasoningEffort;
+                }
+                return body;
+            }
+        };
+    }
+};
+
+function adaptModelForProvider(model, provider) {
+    if (!model) return provider.quirks?.deepseek ? "deepseek-flash" : "";
+    if (!provider.quirks?.deepseek) return model;
+    const m = model.toLowerCase();
+    if (m.includes("v4-pro") || (m.includes("pro") && !m.includes("flash"))) return "deepseek-v4-pro";
+    if (m.includes("flash") || m.includes("v4-flash")) return "deepseek-flash";
+    if (m.includes("reasoner") || m.includes("r1") || m.includes("chat") || m.includes("v3")) return "deepseek-flash";
+    return model.replace(/^deepseek-ai\//i, "");
+}
+
+function isImageModel(model) {
+    return IMAGE_MODEL_RE.test(model || "");
+}
+
+function friendlyHttpError(status, data) {
+    const msg = data?.error?.message || data?.message || "";
+    const map = {
+        400: "请求参数有误（模型名、格式或思考强度设置不兼容）",
+        401: "API Key 无效或未授权",
+        402: "余额不足或需要付费",
+        403: "无权限访问该模型",
+        404: "接口或模型不存在",
+        429: "请求过于频繁，请稍后重试",
+        500: "服务端内部错误",
+        502: "网关错误，请稍后重试",
+        503: "服务暂时不可用",
+        504: "网关超时",
+        408: "请求超时",
+        413: "请求内容过大",
+        415: "接口不支持当前请求格式",
+        422: "请求参数无法处理"
+    };
+    const base = map[status] || ("HTTP " + status);
+    return msg ? base + "\n" + msg : base;
+}
+
+let history = [];
+let sessions = [];
+let currentSessionId = null;
+let currentAttachment = null;
+let abortCtrl = null;
+let streamRenderTimer = null;
+let lastStreamRender = 0;
+let autoSave = true;
+let saveTimer = null;
+let themeMode = "light";
+let lastProviderId = null;
+let modelCatalog = [];
+let modelCatalogMeta = {};
+let modelFetchCtrl = null;
+let modelFetchTimer = null;
+const MODEL_CACHE_TTL = 30 * 60 * 1000;
+
+
+/* ==================== StorageService / IndexedDB ====================
+ * V10.5: IndexedDB becomes the primary persistence layer. A small in-memory
+ * cache keeps the existing synchronous call sites fast; legacy localStorage is
+ * used only once for migration/fallback and is never required for normal use.
+ */
+const appStorage = (() => {
+    const DB_NAME = "fsy_ai_v10";
+    const DB_VERSION = 1;
+    const STORE = "kv";
+    const memory = new Map();
+    let db = null;
+    let initialized = false;
+    let initPromise = null;
+
+    function readLegacy(key) {
+        try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function removeLegacy(key) {
+        try { window.localStorage.removeItem(key); } catch (e) {}
+    }
+    function legacyKeys() {
+        try {
+            const out = [];
+            const allowed = k => /^v9_(?:key|base|custom|model|reasoning_effort|sys|tokens|turns|img_turns|temp|auto_save|theme|current|sessions|history|provider_keys|msg_)/.test(k) || /^v10_model_cache:/.test(k);
+            for (let i = 0; i < window.localStorage.length; i++) {
+                const k = window.localStorage.key(i);
+                if (k && allowed(k)) out.push(k);
+            }
+            return out;
+        } catch (e) { return []; }
+    }
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            if (!window.indexedDB) return reject(new Error("当前浏览器不支持 IndexedDB"));
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = () => {
+                const d = req.result;
+                if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE);
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error || new Error("IndexedDB 打开失败"));
+        });
+    }
+    function getAll() {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE, "readonly");
+            const store = tx.objectStore(STORE);
+            const req = store.openCursor();
+            const rows = [];
+            req.onsuccess = () => {
+                const c = req.result;
+                if (c) { rows.push([c.key, c.value]); c.continue(); }
+                else resolve(rows);
+            };
+            req.onerror = () => reject(req.error || new Error("IndexedDB 读取失败"));
+        });
+    }
+    function put(key, value) {
+        if (!db) return;
+        try {
+            const tx = db.transaction(STORE, "readwrite");
+            tx.objectStore(STORE).put(value, key);
+        } catch (e) { console.warn("IndexedDB 写入失败", e); }
+    }
+    function del(key) {
+        if (!db) return;
+        try {
+            const tx = db.transaction(STORE, "readwrite");
+            tx.objectStore(STORE).delete(key);
+        } catch (e) { console.warn("IndexedDB 删除失败", e); }
+    }
+    async function init() {
+        if (initialized) return true;
+        if (initPromise) return initPromise;
+        initPromise = (async () => {
+            try {
+                db = await openDB();
+                const rows = await getAll();
+                rows.forEach(([k,v]) => memory.set(String(k), String(v ?? "")));
+
+                // One-time migration: preserve every legacy localStorage value.
+                // Existing IndexedDB values win, so a re-run is idempotent.
+                const legacy = legacyKeys();
+                let migrated = 0;
+                for (const key of legacy) {
+                    if (memory.has(key)) continue;
+                    const value = readLegacy(key);
+                    if (value == null) continue;
+                    memory.set(key, value);
+                    put(key, value);
+                    migrated++;
+                }
+                // Migration is complete: remove the legacy copy so disabled memory
+                // cannot be resurrected from stale localStorage on the next boot.
+                legacy.forEach(removeLegacy);
+                if (migrated) console.info("FSY AI: 已迁移", migrated, "项旧版存储到 IndexedDB");
+                initialized = true;
+                return true;
+            } catch (e) {
+                // Graceful fallback: preload legacy values into memory and keep app usable.
+                legacyKeys().forEach(k => { const v = readLegacy(k); if (v != null) memory.set(k, v); });
+                console.warn("IndexedDB 初始化失败，使用兼容内存存储：", e);
+                initialized = true;
+                return false;
+            }
+        })();
+        return initPromise;
+    }
+    return {
+        init,
+        getItem(key) { return memory.has(key) ? memory.get(key) : null; },
+        setItem(key, value) {
+            const v = String(value);
+            memory.set(key, v);
+            if (db) put(key, v);
+            else { try { window.localStorage.setItem(key, v); } catch (e) {} }
+        },
+        removeItem(key) {
+            memory.delete(key);
+            if (db) del(key);
+            else { try { window.localStorage.removeItem(key); } catch (e) {} }
+            // Do not delete legacy localStorage during ordinary operation.
+            // It remains as a recovery source for older versions.
+        },
+        clearPrefix(prefix) {
+            for (const key of [...memory.keys()]) if (key.startsWith(prefix)) { memory.delete(key); if (db) del(key); else { try { window.localStorage.removeItem(key); } catch (e) {} } }
+        },
+        isIndexedDB() { return !!db; }
+    };
+})();
+
+function uid() {
+    return "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+}
+
+function msgKey(id) { return "v9_msg_" + id; }
+
+/** 按供应商分别存储 API Key */
+function providerKeyId() {
+    const sel = $("base-url-select").value;
+    if (sel === "custom") {
+        const c = ($("custom-base-url").value || "").trim().replace(/\/+$/, "");
+        return "custom:" + (c || "default");
+    }
+    return sel;
+}
+
+function loadProviderKeys() {
+    try {
+        const raw = appStorage.getItem("v9_provider_keys");
+        if (raw) {
+            const obj = JSON.parse(raw);
+            if (obj && typeof obj === "object") return obj;
+        }
+    } catch (e) {}
+    // 兼容旧版单一 v9_key
+    const legacy = appStorage.getItem("v9_key");
+    const map = {};
+    if (legacy) {
+        map["https://api.deepseek.com"] = legacy;
+        map["https://api.siliconflow.cn/v1"] = legacy;
+        map["https://openrouter.ai/api/v1"] = legacy;
+        map["https://api.openai.com/v1"] = legacy;
+    }
+    return map;
+}
+
+function saveProviderKeys(map) {
+    try {
+        appStorage.setItem("v9_provider_keys", JSON.stringify(map || {}));
+    } catch (e) { console.warn(e); }
+}
+
+function getCurrentProviderKey() {
+    const map = loadProviderKeys();
+    return map[providerKeyId()] || "";
+}
+
+function setCurrentProviderKey(key) {
+    const map = loadProviderKeys();
+    const id = providerKeyId();
+    if (key) map[id] = key;
+    else delete map[id];
+    saveProviderKeys(map);
+}
+
+function syncKeyInputFromProvider() {
+    const k = getCurrentProviderKey();
+    $("api-key").value = k;
+    updateKeyProviderHint();
+}
+
+function updateKeyProviderHint() {
+    const el = $("key-provider-hint");
+    if (!el) return;
+    const sel = $("base-url-select").value;
+    const labels = {
+        "https://api.deepseek.com": "DeepSeek",
+        "https://api.siliconflow.cn/v1": "硅基流动",
+        "https://openrouter.ai/api/v1": "OpenRouter",
+        "https://api.openai.com/v1": "OpenAI",
+        "custom": "自定义"
+    };
+    const name = labels[sel] || "当前";
+    const has = !!getCurrentProviderKey();
+    el.textContent = has ? "(" + name + " · 已存)" : "(" + name + " · 未存)";
+}
+
+
+function firstUserPreview(msgs) {
+    for (const m of msgs || []) {
+        if (m.role !== "user") continue;
+        let t = "";
+        if (Array.isArray(m.content)) {
+            t = m.content.filter(p => p.type === "text").map(p => p.text || "").join(" ");
+        } else t = String(m.content || "");
+        t = t.replace(/\s+/g, " ").trim();
+        if (t) return t.slice(0, 28);
+    }
+    return "";
+}
+
+function persistSessionsMeta() {
+    try {
+        appStorage.setItem("v9_sessions", JSON.stringify(sessions));
+        appStorage.setItem("v9_current", currentSessionId || "");
+    } catch (e) { console.warn(e); }
+}
+
+function saveMessagesFor(id, msgs) {
+    if (!id) return;
+    try {
+        const clean = (msgs || []).map(it => {
+            const o = { role: it.role, content: it.content, hasImage: !!it.hasImage };
+            if (it.reasoning_content) o.reasoning_content = String(it.reasoning_content);
+            if (it.finish_reason != null) o.finish_reason = it.finish_reason;
+            if (it.usage) o.usage = it.usage;
+            if (it.requestMeta) o.requestMeta = it.requestMeta;
+            if (it.displayContent && String(it.displayContent).length < 3000) o.displayContent = it.displayContent;
+            return o;
+        });
+        appStorage.setItem(msgKey(id), JSON.stringify(clean));
+    } catch (e) {
+        try {
+            const slim = (msgs || []).slice(-6).map(it => ({ role: it.role, content: it.content, hasImage: !!it.hasImage, reasoning_content: it.reasoning_content, finish_reason: it.finish_reason, usage: it.usage }));
+            appStorage.setItem(msgKey(id), JSON.stringify(slim));
+        } catch (e2) {}
+    }
+}
+
+function loadMessagesFor(id) {
+    if (!id) return [];
+    try {
+        const raw = appStorage.getItem(msgKey(id));
+        if (!raw) return [];
+        return JSON.parse(raw) || [];
+    } catch (e) { return []; }
+}
+
+function touchSessionMeta() {
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (!s) return;
+    s.updatedAt = Date.now();
+    const prev = firstUserPreview(history);
+    if (prev) {
+        s.preview = prev;
+        if (!s.title || s.title === "新对话") s.title = prev;
+    }
+    sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    persistSessionsMeta();
+    renderSessionList();
+}
+
+function renderSessionList() {
+    const box = $("session-list");
+    if (!box) return;
+    box.innerHTML = "";
+    const cnt = $("session-count");
+    if (cnt) cnt.textContent = String(sessions.length);
+    sessions.forEach(s => {
+        const el = document.createElement("div");
+        el.className = "session-item" + (s.id === currentSessionId ? " active" : "");
+        el.innerHTML = `<span class="s-title"></span><button type="button" class="s-del" title="删除">×</button>`;
+        el.querySelector(".s-title").textContent = s.title || "新对话";
+        el.querySelector(".s-title").title = s.preview || s.title || "";
+        el.onclick = (e) => {
+            if (e.target.closest(".s-del")) return;
+            switchSession(s.id);
+        };
+        el.querySelector(".s-del").onclick = (e) => {
+            e.stopPropagation();
+            deleteSession(s.id);
+        };
+        el.ondblclick = (e) => {
+            if (e.target.closest(".s-del")) return;
+            renameSession(s.id);
+        };
+        box.appendChild(el);
+    });
+    const bar = $("session-title-bar");
+    const cur = sessions.find(x => x.id === currentSessionId);
+    if (bar) bar.textContent = cur ? (cur.title || "新对话") : "";
+}
+
+function ensureSessions() {
+    const old = appStorage.getItem("v9_history");
+    try {
+        sessions = JSON.parse(appStorage.getItem("v9_sessions") || "[]");
+        if (!Array.isArray(sessions)) sessions = [];
+    } catch (e) { sessions = []; }
+    currentSessionId = appStorage.getItem("v9_current") || null;
+
+    if (old && sessions.length === 0) {
+        const id = uid();
+        let msgs = [];
+        try { msgs = JSON.parse(old) || []; } catch (e) {}
+        sessions = [{ id, title: firstUserPreview(msgs) || "历史对话", updatedAt: Date.now(), preview: firstUserPreview(msgs) }];
+        currentSessionId = id;
+        saveMessagesFor(id, msgs);
+        appStorage.removeItem("v9_history");
+        persistSessionsMeta();
+    }
+
+    if (sessions.length === 0) {
+        const id = uid();
+        sessions = [{ id, title: "新对话", updatedAt: Date.now(), preview: "" }];
+        currentSessionId = id;
+        saveMessagesFor(id, []);
+        persistSessionsMeta();
+    }
+
+    if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
+        currentSessionId = sessions[0].id;
+        persistSessionsMeta();
+    }
+}
+
+function newSession() {
+    if (abortCtrl) { alert("请先停止当前生成"); return; }
+    saveHistory();
+    const id = uid();
+    sessions.unshift({ id, title: "新对话", updatedAt: Date.now(), preview: "" });
+    currentSessionId = id;
+    history = [];
+    saveMessagesFor(id, []);
+    persistSessionsMeta();
+    renderSessionList();
+    redrawChatbox();
+    updateContextSummaryStatus();
+    setStatus("已新建对话");
+}
+
+function switchSession(id) {
+    if (!id || id === currentSessionId) return;
+    if (abortCtrl) { alert("请先停止当前生成"); return; }
+    saveHistory();
+    currentSessionId = id;
+    history = loadMessagesFor(id);
+    persistSessionsMeta();
+    renderSessionList();
+    redrawChatbox();
+    updateContextSummaryStatus();
+    setStatus("已切换会话");
+}
+
+function deleteSession(id) {
+    if (abortCtrl) { alert("请先停止当前生成"); return; }
+    if (sessions.length <= 1) {
+        if (!confirm("这是最后一个会话，删除后将新建空白对话。继续？")) return;
+    } else if (!confirm("删除该会话？此操作不可恢复。")) return;
+
+    if (id === currentSessionId) saveHistory();
+    sessions = sessions.filter(s => s.id !== id);
+    try { appStorage.removeItem(msgKey(id)); ContextCompressor.clearSummary(id); } catch (e) {}
+
+    if (sessions.length === 0) {
+        const nid = uid();
+        sessions = [{ id: nid, title: "新对话", updatedAt: Date.now(), preview: "" }];
+        currentSessionId = nid;
+        history = [];
+        saveMessagesFor(nid, []);
+    } else if (id === currentSessionId) {
+        currentSessionId = sessions[0].id;
+        history = loadMessagesFor(currentSessionId);
+    }
+    persistSessionsMeta();
+    renderSessionList();
+    redrawChatbox();
+    updateContextSummaryStatus();
+    setStatus("已删除会话");
+}
+
+function renameSession(id) {
+    const s = sessions.find(x => x.id === id);
+    if (!s) return;
+    const t = prompt("会话标题", s.title || "新对话");
+    if (t == null) return;
+    const name = t.trim().slice(0, 40);
+    if (!name) return;
+    s.title = name;
+    s.updatedAt = Date.now();
+    persistSessionsMeta();
+    renderSessionList();
+}
+
+function redrawChatbox() {
+    const box = $("chatbox");
+    box.innerHTML = "";
+    if (!history.length) {
+        box.innerHTML = '<div class="empty-hint" id="empty-hint">开始一次新的对话吧</div>';
+        return;
+    }
+    history.forEach((m, idx) => {
+        const row = document.createElement("div");
+        row.className = "msg-row " + (m.role === "user" ? "user" : "bot");
+        const av = m.role === "user" ? "我" : "AI";
+        let html = m.role === "user" ? userHtml(m) : (m.reasoning_content ? `<details class="reasoning-box"><summary>🧠 思考过程</summary><div class="reasoning-text">${fmt(m.reasoning_content)}</div></details>` : "") + fmt(typeof m.content === "string" ? m.content : JSON.stringify(m.content));
+        const actions = m.role === "assistant"
+            ? `<div class="msg-actions show"><span class="action-link" onclick="copyMsg(${idx})">📋 复制</span><span class="action-link" onclick="retryMsg(${idx})">🔄 重试</span></div>` : "";
+        row.innerHTML = `<div class="avatar">${av}</div><div class="bubble-wrap"><div class="bubble">${html}</div>${actions}</div>`;
+        if (m.role === "assistant") row.querySelectorAll("pre").forEach(addCopyAndPreview);
+        box.appendChild(row);
+    });
+    mathSafe(box);
+    requestAnimationFrame(() => { chatAutoFollow = true; scrollChatToBottom(true); updateScrollBottomButton(); });
+}
+
+window.onload = async () => {
+    await appStorage.init();
+    autoSave = appStorage.getItem("v9_auto_save") !== "false";
+    updateSaveBtn();
+    themeMode = appStorage.getItem("v9_theme") || "light";
+    applyTheme();
+
+    if (autoSave) {
+        const b = appStorage.getItem("v9_base") || "https://api.deepseek.com";
+        const sel = $("base-url-select");
+        if ([...sel.options].some(o => o.value === b)) sel.value = b;
+        else { sel.value = "custom"; $("custom-url-wrap").style.display = "block"; $("custom-base-url").value = appStorage.getItem("v9_custom") || b; }
+        rebuildModels(sel.value);
+        syncKeyInputFromProvider();
+        const m = appStorage.getItem("v9_model");
+        if (m) {
+            if ([...$("model-select").options].some(o => o.value === m)) $("model-select").value = m;
+            else $("model-manual").value = m;
+        }
+        const eff = appStorage.getItem("v9_reasoning_effort"); if (eff) $("reasoning-effort-select").value = (eff === "medium" ? "high" : eff);
+        const s = appStorage.getItem("v9_sys"); if (s != null) $("system-prompt").value = s;
+        const t = appStorage.getItem("v9_tokens"); if (t) $("max-tokens").value = t;
+        const turns = appStorage.getItem("v9_turns"); if (turns) $("max-turns").value = turns;
+        const img = appStorage.getItem("v9_img_turns"); if (img) $("max-img-turns").value = img;
+        const temp = appStorage.getItem("v9_temp"); if (temp) { $("temp").value = temp; $("temp-val").textContent = temp; }
+    } else {
+        rebuildModels($("base-url-select").value);
+        updateKeyProviderHint();
+    }
+
+    updateTokenChips();
+    updateModelBadge();
+    if (!window.marked || !window.DOMPurify) {
+        console.warn("FSY AI: Markdown/Sanitizer CDN 未加载，已自动降级为安全纯文本模式。");
+        setStatus("渲染库未加载 · 已降级", "err");
+    }
+    updateKeyProviderHint();
+    ensureSessions();
+    history = loadMessagesFor(currentSessionId);
+    renderSessionList();
+    redrawChatbox();
+    updateContextSummaryStatus();
+    bindUI();
+    // WebToApp 的 DOCUMENT_END 性能脚本可能对 main>div 使用 content-visibility:auto。
+    // 再次强制聊天容器保持完整布局，避免长回答/流式输出时出现“顶上去、空白或滚动跳动”。
+    requestAnimationFrame(() => {
+        [$("chatbox"), $("input-area"), $("sidebar")].forEach(el => {
+            if (!el) return;
+            el.style.contentVisibility = "visible";
+            el.style.contain = el.id === "chatbox" ? "layout style" : "layout paint";
+        });
+    });
+    lastProviderId = providerKeyId();
+    updateKeyProviderHint();
+    restoreCachedModels();
+    if ($("api-key")?.value.trim()) fetchModels({silent:true});
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (themeMode === "system") applyTheme(); });
+
+    const flushSave = () => {
+        if (!autoSave) return;
+        clearTimeout(saveTimer);
+        saveSettings();
+        saveHistory();
+    };
+    window.addEventListener("beforeunload", flushSave);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") flushSave();
+    });
+};
+
+function $(id) { return document.getElementById(id); }
+
+function updateContextSummaryStatus() {
+    const el = $("context-summary-status");
+    if (!el) return;
+    const s = ContextCompressor.get(currentSessionId);
+    if (!s?.summary) { el.textContent = "上下文压缩：未建立摘要（聊天记录不会被删除）"; return; }
+    const count = Number(s.coveredMessageCount || 0);
+    el.textContent = `上下文压缩：已建立摘要 · 已覆盖约 ${count} 条历史消息`;
+}
+
+let chatAutoFollow = true;
+let chatScrollRaf = 0;
+
+function isChatNearBottom(box, threshold=96) {
+    return box.scrollHeight - box.scrollTop - box.clientHeight <= threshold;
+}
+
+function scrollChatToBottom(force=false) {
+    const box = $("chatbox");
+    if (!box) return;
+    if (force || chatAutoFollow || isChatNearBottom(box)) box.scrollTop = box.scrollHeight;
+}
+
+function updateScrollBottomButton() {
+    const box = $("chatbox"), btn = $("scroll-bottom-btn");
+    if (!box || !btn) return;
+    const away = !isChatNearBottom(box, 120);
+    btn.classList.toggle("show", away);
+    if (away) chatAutoFollow = false;
+}
+
+function bindUI() {
+    const chatbox = $("chatbox");
+    chatbox.addEventListener("scroll", () => {
+        if (chatScrollRaf) return;
+        chatScrollRaf = requestAnimationFrame(() => {
+            chatScrollRaf = 0;
+            chatAutoFollow = isChatNearBottom(chatbox, 48);
+            updateScrollBottomButton();
+        });
+    }, {passive:true});
+    $("scroll-bottom-btn").onclick = () => { chatAutoFollow = true; scrollChatToBottom(true); updateScrollBottomButton(); };
+
+    $("base-url-select").onchange = e => {
+        // 切换前：把输入框内容写回上一个供应商槽位
+        if (lastProviderId) {
+            const map = loadProviderKeys();
+            const cur = $("api-key").value.trim();
+            if (cur) map[lastProviderId] = cur;
+            else delete map[lastProviderId];
+            saveProviderKeys(map);
+        }
+        $("custom-url-wrap").style.display = e.target.value === "custom" ? "block" : "none";
+        rebuildModels(e.target.value);
+        lastProviderId = providerKeyId();
+        syncKeyInputFromProvider();
+        restoreCachedModels();
+        if ($("api-key").value.trim()) fetchModels({silent:true});
+        onSetting(true);
+        updateModelBadge();
+        updateKeyProviderHint();
+    };
+    $("custom-base-url").oninput = () => {
+        // 自定义 URL 变化时，Key 槽位跟着变
+        syncKeyInputFromProvider();
+        onSetting();
+        updateModelBadge();
+        updateKeyProviderHint();
+        setModelStatus("自定义地址已变化，等待失焦后自动同步");
+    };
+    $("custom-base-url").onblur = () => {
+        lastProviderId = providerKeyId();
+        syncKeyInputFromProvider();
+        restoreCachedModels();
+        if ($("api-key").value.trim()) fetchModels({silent:true});
+        onSetting(true);
+    };
+    $("api-key").oninput = () => {
+        setCurrentProviderKey($("api-key").value.trim());
+        updateKeyProviderHint();
+        onSetting();
+    };
+    $("api-key").onblur = () => {
+        setCurrentProviderKey($("api-key").value.trim());
+        updateKeyProviderHint();
+        onSetting(true);
+        scheduleModelFetch();
+    };
+    $("model-select").onchange = () => { $("model-manual").value = ""; onSetting(true); updateModelBadge(); };
+    $("model-manual").oninput = () => { onSetting(); updateModelBadge(); };
+    $("model-manual").onblur = () => onSetting(true);
+    $("reasoning-effort-select").onchange = () => onSetting(true);
+    $("system-prompt").oninput = onSetting;
+    $("max-tokens").oninput = () => { updateTokenChips(); onSetting(); };
+    $("max-tokens").onchange = () => { updateTokenChips(); onSetting(true); };
+    $("max-turns").oninput = onSetting;
+    $("max-img-turns").oninput = onSetting;
+    $("temp").oninput = e => { $("temp-val").textContent = e.target.value; onSetting(); };
+    $("temp").onchange = () => onSetting(true);
+
+    document.querySelectorAll(".token-chip").forEach(c => c.onclick = () => {
+        $("max-tokens").value = c.dataset.v;
+        updateTokenChips();
+        onSetting(true);
+        setStatus("Tokens 已设为 " + c.textContent);
+    });
+    document.querySelectorAll(".theme-chip").forEach(c => c.onclick = () => {
+        themeMode = c.dataset.t;
+        appStorage.setItem("v9_theme", themeMode);
+        applyTheme();
+    });
+    $("theme-quick").onclick = () => {
+        themeMode = document.documentElement.classList.contains("dark") ? "light" : "dark";
+        appStorage.setItem("v9_theme", themeMode);
+        applyTheme();
+    };
+
+    $("menu-btn").onclick = () => toggleSidebar();
+    $("close-side-btn").onclick = () => closeSidebar();
+    $("compact-context-btn").onclick = async () => {
+        if (abortCtrl) { alert("请先停止当前生成"); return; }
+        const key = getCurrentProviderKey();
+        if (!key) { alert("请先填写 API Key"); return; }
+        const adapter = ProviderAdapter.forCurrent();
+        const model = adaptModel(getSelectedModel(), getEndpoint());
+        const cap = CapabilityResolver.resolve(getSelectedModel(), adapter.provider);
+        if (!cap.contextLength) { alert("当前模型没有可靠的上下文长度信息，暂不自动压缩。"); return; }
+        setStatus("正在压缩上下文…", "busy");
+        try {
+            const result = await ContextCompressor.compact({sessionId:currentSessionId, history, adapter, model, contextLength:cap.contextLength, force:true});
+            if (!result.ok) throw new Error(result.reason === "not_enough_history" ? "当前对话还没有足够的历史可压缩" : result.reason);
+            updateContextSummaryStatus();
+            setStatus(`已压缩 ${result.compactedMessages} 条旧消息`);
+        } catch (e) { setStatus("压缩失败", "err"); alert("上下文压缩失败：" + (e.message || e)); }
+    };
+    $("clear-context-summary-btn").onclick = () => {
+        if (!currentSessionId) return;
+        ContextCompressor.clearSummary(currentSessionId);
+        updateContextSummaryStatus();
+        setStatus("已清除上下文摘要");
+    };
+    $("side-overlay").onclick = () => closeSidebar();
+
+    function isMobile() { return window.innerWidth <= 768; }
+    function toggleSidebar() {
+        const sb = $("sidebar");
+        if (isMobile()) {
+            const open = sb.classList.toggle("open");
+            $("side-overlay").classList.toggle("show", open);
+        } else {
+            sb.classList.toggle("collapsed");
+        }
+    }
+    function closeSidebar() {
+        const sb = $("sidebar");
+        sb.classList.remove("open");
+        $("side-overlay").classList.remove("show");
+        if (!isMobile()) sb.classList.add("collapsed");
+    }
+    window.addEventListener("resize", () => {
+        if (!isMobile()) {
+            $("sidebar").classList.remove("open");
+            $("side-overlay").classList.remove("show");
+        }
+    });
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape") { closeSidebar(); closePreviewModal(); }
+    });
+
+    const ta = $("text-input");
+    ta.oninput = () => autoGrow(ta);
+    ta.onkeydown = e => {
+        // 中文/日文等输入法正在组词时，Enter 只提交候选词，不应误发送消息。
+        if (e.isComposing || e.keyCode === 229) return;
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendOrStop(); }
+    };
+
+    document.body.addEventListener("dragover", e => e.preventDefault());
+    document.body.addEventListener("drop", e => {
+        e.preventDefault();
+        if (e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
+    });
+}
+
+function applyTheme() {
+    let dark = false;
+    if (themeMode === "dark") dark = true;
+    else if (themeMode === "system") dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.classList.toggle("dark", dark);
+    $("hljs-dark").disabled = !dark;
+    $("hljs-light").disabled = dark;
+    document.querySelectorAll(".theme-chip").forEach(c => c.classList.toggle("active", c.dataset.t === themeMode));
+}
+
+function setModelStatus(text, kind) {
+    const el = $("model-status");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = "model-status" + (kind === "ok" ? " ok" : kind === "err" ? " err" : "");
+}
+
+function rebuildModels(baseKey) {
+    const list = MODEL_PRESETS[baseKey] || MODEL_PRESETS.custom;
+    const sel = $("model-select");
+    const prev = sel.value;
+    sel.innerHTML = "";
+    list.forEach(p => {
+        const o = document.createElement("option");
+        o.value = p.value; o.textContent = p.label;
+        sel.appendChild(o);
+    });
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+    modelCatalog = [];
+    modelCatalogMeta = {};
+    setModelStatus("使用预设模型；有 Key 后自动同步");
+    updateBudgetMeter();
+}
+
+function modelCacheKey() {
+    return "v10_model_cache:" + providerKeyId();
+}
+
+function isChatCapableModel(item) {
+    const id = String(item?.id || "");
+    const lower = id.toLowerCase();
+    const output = []
+        .concat(item?.architecture?.output_modalities || [])
+        .concat(item?.output_modalities || [])
+        .concat(item?.outputModalities || []);
+    const hasTextOutput = output.some(x => String(x).toLowerCase() === "text");
+    if (hasTextOutput) return true;
+    if (/embedding|embed|rerank|re-rank|whisper|tts|speech|audio-generation|video-generation|image-generation|image-edit/i.test(lower)) return false;
+    if (item?.type && /embedding|rerank|audio|image|video/i.test(String(item.type))) return false;
+    return !IMAGE_MODEL_RE.test(id);
+}
+
+function normalizeModelList(data, providerId=null) {
+    const arr = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+    const seen = new Set();
+    const out = [];
+    const pid = providerId || ProviderAdapter.forCurrent().provider.id;
+    for (const item of arr) {
+        const id = typeof item === "string" ? item.trim() : String(item?.id || "").trim();
+        if (!id || seen.has(id) || !isChatCapableModel(typeof item === "string" ? {id} : item)) continue;
+        seen.add(id);
+        const obj = typeof item === "string" ? {id} : item;
+        const name = String(obj.name || obj.id || id).trim();
+        const ctx = Number(obj.context_length || obj.contextLength || obj.max_context_length || obj.limits?.context_length || 0);
+        const maxOut = Number(
+            obj.max_completion_tokens || obj.max_output_tokens ||
+            obj.top_provider?.max_completion_tokens || obj.limits?.max_completion_tokens ||
+            obj.limits?.max_output_tokens || 0
+        );
+        const supported = Array.isArray(obj.supported_parameters) ? obj.supported_parameters.map(String) : [];
+        const modalities = [].concat(obj.architecture?.input_modalities || [], obj.input_modalities || [], obj.inputModalities || []).map(String);
+        const outputModalities = [].concat(obj.architecture?.output_modalities || [], obj.output_modalities || [], obj.outputModalities || []).map(String);
+        const reasoningParam = supported.find(x => /reasoning_effort/i.test(x)) || (supported.some(x => /^thinking$/i.test(x)) ? "thinking" : null);
+        const tokenParameter = supported.some(x => /^max_completion_tokens$/i.test(x)) ? "max_completion_tokens" : supported.some(x => /^max_tokens$/i.test(x)) ? "max_tokens" : (pid === "openai" ? "max_completion_tokens" : "max_tokens");
+        const reasoningKnown = supported.length ? supported.some(x => /reasoning|reasoning_effort|include_reasoning|thinking/i.test(x)) : null;
+        const visionKnown = modalities.length ? modalities.some(x => /image|vision/i.test(x)) : null;
+        const toolsKnown = supported.length ? supported.some(x => /tool|function/i.test(x)) : null;
+        const meta = {
+            _maxOutputTokens:maxOut, _contextLength:ctx,
+            _supportsReasoning:reasoningKnown, _supportsVision:visionKnown, _supportsToolUse:toolsKnown,
+            _inputModalities:modalities, _outputModalities:outputModalities, _supportedParameters:supported,
+            _tokenParameter:tokenParameter, _reasoningParameter:reasoningParam, _source:"provider-api",
+            _providerId:pid, _rawType:obj.type || null
+        };
+        out.push({ id, label:name === id ? id : `${name} · ${id}`, meta });
+    }
+    return out;
+}
+
+/* ==================== V10.7 ModelRegistry / CapabilityResolver + V10.8 RequestPlanner ====================
+ * ModelRegistry answers: “which model is this?”
+ * CapabilityResolver answers: “what can this model safely do?”
+ * ProviderAdapter remains responsible for wire/protocol translation only.
+ */
+const ModelRegistry = (() => {
+    const records = new Map();
+    const keyOf = (providerId, modelId) => `${providerId || "unknown"}::${String(modelId || "")}`;
+    function register(record) {
+        if (!record?.id) return null;
+        const providerId = record.providerId || record.meta?._providerId || ProviderAdapter.forCurrent().provider.id;
+        const normalized = { ...record, providerId, canonicalId:record.canonicalId || record.id, meta:{...(record.meta||{}), _providerId:providerId} };
+        records.set(keyOf(providerId, normalized.id), normalized);
+        return normalized;
+    }
+    function registerMany(list, providerId) { return (list || []).map(x => register({...x, providerId})).filter(Boolean); }
+    function get(modelId, providerId) { return records.get(keyOf(providerId || ProviderAdapter.forCurrent().provider.id, modelId)) || null; }
+    function has(modelId, providerId) { return !!get(modelId, providerId); }
+    function resolve(modelId, providerId) { return get(modelId, providerId) || {id:modelId, canonicalId:modelId, providerId:providerId || ProviderAdapter.forCurrent().provider.id, meta:{_source:"manual"}}; }
+    function clear(providerId) {
+        if (!providerId) records.clear();
+        else [...records.keys()].filter(k => k.startsWith(providerId+"::")).forEach(k => records.delete(k));
+    }
+    function exportAll() { return [...records.values()].map(x => ({...x, meta:{...x.meta}})); }
+    return {register,registerMany,get,has,resolve,clear,exportAll};
+})();
+
+const CapabilityResolver = (() => {
+    const heuristic = {
+        reasoning:/deepseek|reasoner|r1|o1|o3|o4|thinking|reasoning|qwen3/i,
+        vision:/vision|vl|gpt-4o|gemini|qwen.*vl|claude/i
+    };
+    const fact = (value, source, confidence="high") => ({value:value === undefined ? null : value, source, confidence});
+    function resolve(modelId, provider=null) {
+        const p = provider || ProviderAdapter.forCurrent().provider;
+        const rec = ModelRegistry.resolve(modelId, p.id);
+        const m = rec.meta || {};
+        const lower = String(modelId || "").toLowerCase();
+        const source = m._source || "unknown";
+        const supported = Array.isArray(m._supportedParameters) ? m._supportedParameters : [];
+        const reasoning = m._supportsReasoning === true ? fact(true,source) : m._supportsReasoning === false ? fact(false,source) : heuristic.reasoning.test(lower) ? fact(true,"heuristic","low") : fact(null,"unknown","none");
+        const vision = m._supportsVision === true ? fact(true,source) : m._supportsVision === false ? fact(false,source) : heuristic.vision.test(lower) ? fact(true,"heuristic","low") : fact(null,"unknown","none");
+        const tools = m._supportsToolUse === true ? fact(true,source) : m._supportsToolUse === false ? fact(false,source) : supported.length ? fact(false,"api","medium") : fact(null,"unknown","none");
+        const tokenParameter = m._tokenParameter || (supported.some(x=>/^max_completion_tokens$/i.test(x)) ? "max_completion_tokens" : supported.some(x=>/^max_tokens$/i.test(x)) ? "max_tokens" : (p.id === "openai" ? "max_completion_tokens" : "max_tokens"));
+        return {
+            modelId, providerId:p.id, provider:p.name, protocol:p.protocol,
+            contextLength:Number(m._contextLength||0)||null, maxOutputTokens:Number(m._maxOutputTokens||0)||null,
+            reasoning, vision, tools,
+            imageInput:vision, audioInput:fact((m._inputModalities||[]).some(x=>/audio/i.test(x)),source),
+            streaming:fact(true,"client","high"), structuredOutput:fact(supported.some(x=>/json|structured/i.test(x))||null,supported.length?"api":"unknown",supported.length?"medium":"none"),
+            tokenParameter, reasoningParameter:m._reasoningParameter||null,
+            source,
+            supportedParameters:supported
+        };
+    }
+    return {resolve};
+})();
+
+
+/* ==================== V10.9 BudgetPlanner / V10.8 RequestPlanner / TokenParameterResolver ====================
+ * RequestPlanner owns request policy. ProviderAdapter only knows wire/protocol details.
+ * This keeps sendMsg() focused on UI, lifecycle and streaming instead of parameter rules.
+ */
+const TokenParameterResolver = (() => {
+    function resolve(cap, provider, model) {
+        const supported = Array.isArray(cap?.supportedParameters) ? cap.supportedParameters : [];
+        const has = name => supported.some(x => String(x).toLowerCase() === name);
+        if (cap?.tokenParameter) return cap.tokenParameter;
+        if (has("max_completion_tokens")) return "max_completion_tokens";
+        if (has("max_tokens")) return "max_tokens";
+        if (provider?.id === "openai") return "max_completion_tokens";
+        return "max_tokens";
+    }
+    function reasoningParameter(cap) {
+        if (cap?.reasoningParameter) return cap.reasoningParameter;
+        const supported = Array.isArray(cap?.supportedParameters) ? cap.supportedParameters : [];
+        return supported.find(x => /reasoning_effort/i.test(x)) ||
+            (supported.some(x => /^thinking$/i.test(x)) ? "thinking" : null);
+    }
+    return {resolve, reasoningParameter};
+})();
+
+const BudgetPlanner = (() => {
+    const DEFAULT_SAFETY_RATIO = 0.05;
+    const MIN_SAFETY = 512;
+    const MAX_SAFETY = 8192;
+
+    function messageTokens(msg, ratio=1) {
+        let n = (estimateTokens(msg?.content) + 4) * Math.max(0.5, Number(ratio)||1);
+        if (Array.isArray(msg?.tool_calls)) {
+            for (const tc of msg.tool_calls) n += (estimateTokens(tc?.function?.arguments || "") + 4) * Math.max(0.5, Number(ratio)||1);
+        }
+        return Math.max(1, n);
+    }
+
+    function safetyTokens(contextLength) {
+        if (!contextLength) return 0;
+        return Math.max(MIN_SAFETY, Math.min(MAX_SAFETY, Math.ceil(contextLength * DEFAULT_SAFETY_RATIO)));
+    }
+
+    function outputBudget({requested, reasoningBudget, maxOutputTokens}) {
+        let requestedOutput = Math.max(256, Number(requested) || 256);
+        requestedOutput = Math.max(requestedOutput, Number(reasoningBudget) || 0);
+        if (maxOutputTokens > 0) requestedOutput = Math.min(requestedOutput, maxOutputTokens);
+        return Math.max(256, Math.floor(requestedOutput));
+    }
+
+    function buildTurns(messages) {
+        const system = [];
+        const turns = [];
+        let current = null;
+        for (const msg of messages || []) {
+            if (msg?.role === "system") {
+                system.push(msg);
+                continue;
+            }
+            if (msg?.role === "user") {
+                current = [msg];
+                turns.push(current);
+            } else if (current) {
+                current.push(msg);
+            } else {
+                turns.push([msg]);
+            }
+        }
+        return {system, turns};
+    }
+
+    function trimMessages(messages, inputBudget, ratio=1) {
+        const {system, turns} = buildTurns(messages);
+        const systemTokens = system.reduce((n, m) => n + messageTokens(m, ratio), 0);
+        let used = systemTokens;
+        const kept = [];
+        let dropped = 0;
+        for (let i = turns.length - 1; i >= 0; i--) {
+            const turn = turns[i];
+            const cost = turn.reduce((n, m) => n + messageTokens(m, ratio), 0);
+            // Never silently drop the newest turn. If even the latest turn cannot fit,
+            // keep it and let hardOverflow surface a clear error to the user.
+            if (i === turns.length - 1) {
+                kept.unshift(turn); used += cost;
+            } else if (used + cost <= inputBudget) {
+                kept.unshift(turn); used += cost;
+            } else {
+                dropped += turn.length;
+            }
+        }
+        const result = [...system, ...kept.flat()];
+        return {messages:result, promptTokens:result.reduce((n, m) => n + messageTokens(m, ratio), 0), droppedMessages:dropped, systemTokens};
+    }
+
+    function plan({messages, contextLength, requested, reasoningBudget, reasoningReservation=0, maxOutputTokens, calibrationRatio=1}) {
+        const original = Array.isArray(messages) ? messages : [];
+        const ratio = Math.max(0.5, Math.min(1.8, Number(calibrationRatio)||1));
+        const promptTokensRaw = original.reduce((n, m) => n + messageTokens(m, 1), 0);
+        const promptTokens = original.reduce((n, m) => n + messageTokens(m, ratio), 0);
+        const output = outputBudget({requested, reasoningBudget, maxOutputTokens});
+        const safety = safetyTokens(contextLength);
+        const reasoningReserve = Math.max(0, Number(reasoningReservation)||0);
+        const inputBudget = contextLength > 0 ? Math.max(0, contextLength - output - safety - reasoningReserve) : Infinity;
+        const needsTrim = Number.isFinite(inputBudget) && promptTokens > inputBudget;
+        const trimmed = needsTrim ? trimMessages(original, inputBudget, ratio) : {messages:original, promptTokens, droppedMessages:0, systemTokens:original.filter(m=>m?.role==="system").reduce((n,m)=>n+messageTokens(m, ratio),0)};
+        const finalPromptTokens = trimmed.promptTokens;
+        const remaining = contextLength > 0 ? Math.max(0, contextLength - finalPromptTokens - safety - reasoningReserve) : output;
+        const hardOverflow = contextLength > 0 && finalPromptTokens + safety + 256 > contextLength;
+        const effectiveOutput = contextLength > 0 ? Math.max(256, Math.min(output, remaining || 256)) : output;
+        return {
+            messages:trimmed.messages,
+            originalPromptTokens:promptTokens,
+            promptTokens:finalPromptTokens,
+            promptTokensRaw,
+            calibrationRatio:ratio,
+            inputBudget,
+            outputBudget:output,
+            effectiveOutputTokens:effectiveOutput,
+            safetyTokens:safety,
+            reasoningReservation:reasoningReserve,
+            droppedMessages:trimmed.droppedMessages,
+            trimmed:needsTrim && trimmed.droppedMessages > 0,
+            hardOverflow,
+            contextLength:Number(contextLength)||0
+        };
+    }
+
+    return {plan, messageTokens, trimMessages};
+})();
+
+
+/* ==================== V11.1 ContextManager + ContextCompressor ====================
+ * V11.1 introduces checkpoint-style compaction. The visible conversation remains
+ * untouched; a private per-session summary is inserted only into model context.
+ * Inspired by current Open WebUI / LibreChat patterns:
+ *   - summarize older turns instead of silently deleting them
+ *   - keep recent turns verbatim
+ *   - preserve system instructions and the raw chat history
+ *   - reject invalid/partial summary responses rather than persisting them
+ *   - calibrate local estimates against provider-reported usage
+ */
+const ContextCompressor = (() => {
+    const SUMMARY_PREFIX = "v11_context_summary_v1:";
+    const SUMMARY_VERSION = 1;
+    const RETENTION_PERCENT = 0.40;
+    const MIN_RECENT_MESSAGES = 2;
+    const MIN_COMPACT_CHARS = 2400;
+    const MAX_SUMMARY_TOKENS = 1200;
+    let busy = false;
+
+    function key(sessionId) { return SUMMARY_PREFIX + String(sessionId || "default"); }
+    function load(sessionId) {
+        try {
+            const raw = appStorage.getItem(key(sessionId));
+            const obj = raw ? JSON.parse(raw) : null;
+            return obj && obj.version === SUMMARY_VERSION && typeof obj.summary === "string" ? obj : null;
+        } catch (_) { return null; }
+    }
+    function save(sessionId, data) {
+        if (!sessionId || !data?.summary) return;
+        try { appStorage.setItem(key(sessionId), JSON.stringify({...data, version:SUMMARY_VERSION, updatedAt:Date.now()})); } catch (_) {}
+    }
+    function clear(sessionId) { try { appStorage.removeItem(key(sessionId)); } catch (_) {} }
+    function normalizeText(content) {
+        if (typeof content === "string") return content;
+        if (!Array.isArray(content)) return String(content || "");
+        return content.map(p => {
+            if (p?.type === "text") return p.text || "";
+            if (p?.type === "image_url") return "[图片]";
+            return p?.text || "";
+        }).join("\n");
+    }
+    function turnText(messages) {
+        return (messages || []).map(m => {
+            const role = m?.role || "unknown";
+            let text = normalizeText(m?.content);
+            if (m?.reasoning_content) text += "\n[思考过程已省略，仅保留结论相关信息]";
+            if (m?.finish_reason) text += `\n[finish_reason=${m.finish_reason}]`;
+            return `${role.toUpperCase()}: ${text}`;
+        }).join("\n\n");
+    }
+    function splitForCompaction(messages, contextLength) {
+        const source = (messages || []).filter(m => m?.role !== "system");
+        if (source.length < 4) return null;
+        const targetRecent = Math.max(MIN_RECENT_MESSAGES, Math.ceil(source.length * RETENTION_PERCENT));
+        let split = Math.max(1, source.length - targetRecent);
+        // Never split between an assistant tool call and its result if such data exists.
+        while (split < source.length && source[split]?.role === "tool") split++;
+        while (split > 0 && source[split-1]?.role === "assistant" && Array.isArray(source[split-1]?.tool_calls)) split--;
+        const old = source.slice(0, split);
+        const recent = source.slice(split);
+        if (old.length < 2 || recent.length < MIN_RECENT_MESSAGES) return null;
+        const oldChars = turnText(old).length;
+        const threshold = contextLength > 0 ? Math.max(MIN_COMPACT_CHARS, Math.floor(contextLength * 0.10)) : MIN_COMPACT_CHARS;
+        if (oldChars < threshold && source.length < 12) return null;
+        return {old, recent};
+    }
+    function buildSummaryPrompt(old, previousSummary) {
+        const previous = previousSummary ? `\n\n此前已有的上下文摘要（请在此基础上更新，而不是丢失其中的重要事实）：\n${previousSummary}` : "";
+        return `你是 FSY AI 的上下文压缩器。请把旧对话压缩成一个可供后续模型继续工作的“事实摘要”。\n\n严格要求：\n1. 只总结对话中明确出现的信息，不猜测、不补造。\n2. 保留用户目标、已确认事实、关键决定、约束、未完成任务、代码/配置中的重要细节。\n3. 保留必要的实体名、模型名、参数名、错误信息和数字。\n4. 删除寒暄、重复内容、已经无关的过程细节。\n5. 不要描述你正在执行摘要任务。\n6. 不要输出 JSON、Markdown 标题之外的装饰，也不要调用工具。\n7. 输出应简洁，但要让另一个模型仅凭这份摘要和最近对话继续工作。${previous}\n\n需要压缩的旧对话：\n${turnText(old)}`;
+    }
+    function validSummary(data) {
+        const msg = data?.choices?.[0]?.message;
+        const finish = data?.choices?.[0]?.finish_reason;
+        if (!msg || typeof msg.content !== "string") return null;
+        if (msg.tool_calls || msg.function_call) return null;
+        if (finish === "content_filter" || finish === "length") return null;
+        const text = msg.content.trim();
+        if (text.length < 40) return null;
+        return text;
+    }
+    async function requestSummary({adapter, model, old, previousSummary}) {
+        const cap = CapabilityResolver.resolve(model, adapter.provider);
+        const tokenParameter = TokenParameterResolver.resolve(cap, adapter.provider, model);
+        const messages = [
+            {role:"system", content:"你是可靠的对话上下文摘要器。只输出摘要正文，不调用工具，不输出思考过程。"},
+            {role:"user", content:buildSummaryPrompt(old, previousSummary)}
+        ];
+        const body = {model, messages, stream:false};
+        body[tokenParameter || "max_tokens"] = MAX_SUMMARY_TOKENS;
+        const lower = String(model || "").toLowerCase();
+        const noTemp = /^(o1|o3|o4)|reasoner/i.test(lower) || adapter.provider.quirks?.deepseek;
+        if (!noTemp) body.temperature = 0.1;
+        if (adapter.provider.quirks?.deepseek) body.extra_body = {thinking:{type:"disabled"}};
+        const res = await fetch(adapter.chatEndpoint, {
+            method:"POST",
+            headers:adapter.headers(getCurrentProviderKey(), true),
+            body:JSON.stringify(body)
+        });
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {
+            const m = text.match(/data:\s*(\{[\s\S]*?\})(?:\n|$)/);
+            if (m) { try { data = JSON.parse(m[1]); } catch (_) {} }
+        }
+        if (!res.ok) throw new Error(friendlyHttpError(res.status, data || {}));
+        const summary = validSummary(data);
+        if (!summary) throw new Error("摘要模型返回无效或未完成的摘要");
+        return {summary, usage:data?.usage || null};
+    }
+    async function compact({sessionId, history, adapter, model, contextLength, force=false}) {
+        if (busy) return {ok:false, reason:"busy"};
+        if (!sessionId || !Array.isArray(history) || history.length < 4) return {ok:false, reason:"not_enough_history"};
+        const previous = load(sessionId);
+        const source = previous?.coveredMessageCount ? history.slice(previous.coveredMessageCount) : history.slice();
+        const split = splitForCompaction(source, contextLength);
+        if (!split && !force) return {ok:false, reason:"below_threshold"};
+        if (!split) return {ok:false, reason:"not_enough_history"};
+        busy = true;
+        try {
+            const result = await requestSummary({adapter, model, old:split.old, previousSummary:previous?.summary || ""});
+            const baseCount = previous?.coveredMessageCount || 0;
+            const covered = Math.min(history.length, baseCount + split.old.length);
+            save(sessionId, {
+                summary:result.summary,
+                coveredMessageCount:covered,
+                sourceMessageCount:history.length,
+                model,
+                providerId:adapter.provider.id,
+                usage:result.usage || null
+            });
+            return {ok:true, summary:result.summary, coveredMessageCount:covered, compactedMessages:split.old.length, usage:result.usage || null};
+        } finally { busy = false; }
+    }
+    function get(sessionId) { return load(sessionId); }
+    function clearSummary(sessionId) { clear(sessionId); }
+    return {compact,get,clearSummary,isBusy:()=>busy,normalizeText,turnText};
+})();
+
+const ContextManager = (() => {
+    const CALIBRATION_KEY = "v11_context_calibration_v1";
+    const MIN_RATIO = 0.70, MAX_RATIO = 1.60;
+    function loadCalibration() {
+        try { const raw=appStorage.getItem(CALIBRATION_KEY); const obj=raw?JSON.parse(raw):{}; return obj&&typeof obj==="object"?obj:{}; } catch (_) { return {}; }
+    }
+    let calibration = loadCalibration();
+    function key(providerId, model) { return `${providerId || "unknown"}::${model || "unknown"}`; }
+    function getCalibration(providerId, model) { const v=Number(calibration[key(providerId,model)]?.ratio); return Number.isFinite(v)&&v>=MIN_RATIO&&v<=MAX_RATIO?v:1; }
+    function saveCalibration() { try { appStorage.setItem(CALIBRATION_KEY, JSON.stringify(calibration)); } catch (_) {} }
+    function updateCalibration({providerId,model,reportedPromptTokens,estimatedPromptTokens}) {
+        const reported=Number(reportedPromptTokens), estimated=Number(estimatedPromptTokens); if(!(reported>0)||!(estimated>0))return getCalibration(providerId,model);
+        const observed=Math.max(MIN_RATIO,Math.min(MAX_RATIO,reported/estimated)); const k=key(providerId,model); const prev=Number(calibration[k]?.ratio);
+        const ratio=Number.isFinite(prev)?(prev*0.75+observed*0.25):observed;
+        calibration[k]={ratio:Number(ratio.toFixed(4)),samples:Number(calibration[k]?.samples||0)+1,updatedAt:Date.now()}; saveCalibration(); return ratio;
+    }
+    function selectHistory(source,maxTurns,maxImgTurns) {
+        const selected=[]; let users=0;
+        for(let i=source.length-1;i>=0;i--){const m=source[i];if(m?.role==="user"){users++;if(users>maxTurns)break;}selected.push(m);} selected.reverse();
+        const keepImages=new Set(); let kept=0;
+        for(let i=selected.length-1;i>=0&&kept<maxImgTurns;i--){const m=selected[i];if(m?.role==="user"&&Array.isArray(m.content)&&m.content.some(p=>p?.type==="image_url")){keepImages.add(i);kept++;}}
+        return selected.map((m,idx)=>{if(m?.role!=="user"||!Array.isArray(m.content))return{role:m?.role,content:m?.content};const hasImage=m.content.some(p=>p?.type==="image_url");const parts=m.content.filter(p=>p?.type!=="image_url"||keepImages.has(idx));if(hasImage&&!keepImages.has(idx)){const text=parts.filter(p=>p?.type==="text").map(p=>p?.text||"").join("\n");return{role:"user",content:(text.trim()?text.trim()+"\n":"")+"[此前图片已降级为占位]"};}return{role:"user",content:parts.length===1&&parts[0]?.type==="text"?parts[0].text:parts};});
+    }
+    function prepare({history,systemPrompt,maxTurns,maxImgTurns,providerId,model,sessionId}) {
+        const summary=ContextCompressor.get(sessionId);
+        const selected=selectHistory(Array.isArray(history)?history:[],Math.max(1,Number(maxTurns)||10),Math.max(0,Number(maxImgTurns)||0));
+        const messages=[];
+        if(systemPrompt)messages.push({role:"system",content:systemPrompt});
+        if(summary?.summary)messages.push({role:"assistant",content:`[上下文摘要]\n${summary.summary}`});
+        selected.forEach(m=>messages.push(m));
+        return {messages,calibrationRatio:getCalibration(providerId,model),selectedTurns:Math.max(0,selected.filter(m=>m?.role==="user").length),sourceMessages:Array.isArray(history)?history.length:0,selectedMessages:selected.length,summaryActive:!!summary?.summary,summaryCoveredMessages:Number(summary?.coveredMessageCount||0),summaryUpdatedAt:summary?.updatedAt||0};
+    }
+    function recordUsage({providerId,model,plan,usage}) { const reported=usage?.prompt_tokens??usage?.input_tokens??usage?.promptTokens??usage?.inputTokens; if(reported==null||!plan)return getCalibration(providerId,model); return updateCalibration({providerId,model,reportedPromptTokens:reported,estimatedPromptTokens:plan.promptTokensRaw||plan.promptTokens}); }
+    return {prepare,getCalibration,updateCalibration,recordUsage};
+})();
+
+const RequestPlanner = (() => {
+    function plan({adapter, rawModel, model, messages, maxTokens, temperature, reasoningEffort, promptTokens, calibrationRatio=1}) {
+        const provider = adapter.provider;
+        const cap = CapabilityResolver.resolve(rawModel, provider);
+        const tokenParameter = TokenParameterResolver.resolve(cap, provider, model);
+        const reasoningParameter = TokenParameterResolver.reasoningParameter(cap);
+        const reasoningSupported = cap.reasoning.value === true || provider.quirks?.deepseek === true;
+        const reasoningBudget = reasoningSupported && reasoningEffort !== "none" ? getReasoningAutoBudget(reasoningEffort) : 0;
+        const isSiliconQwen38 = provider.id === "siliconflow" && /qwen\/?qwen3\.8-27b/i.test(String(rawModel||""));
+        const reasoningReservation = isSiliconQwen38 ? reasoningBudget : 0;
+        const budget = BudgetPlanner.plan({
+            messages,
+            contextLength:Number(cap.contextLength || 0),
+            requested:maxTokens,
+            reasoningBudget,
+            reasoningReservation,
+            maxOutputTokens:Number(cap.maxOutputTokens || 0),
+            calibrationRatio
+        });
+        const effectiveMaxTokens = budget.effectiveOutputTokens;
+        const body = adapter.buildRequestBody({
+            model, msgs:budget.messages, maxTokens:effectiveMaxTokens,
+            temp:temperature, reasoningEffort,
+            supportsReasoning:reasoningSupported,
+            tokenParameter, reasoningParameter
+        });
+        return {
+            providerId:provider.id,
+            provider:provider.name,
+            protocol:provider.protocol,
+            rawModel,
+            model,
+            capabilities:cap,
+            tokenParameter,
+            reasoningParameter,
+            reasoningSupported,
+            reasoningBudget,
+            promptTokens:budget.promptTokens,
+            originalPromptTokens:budget.originalPromptTokens,
+            promptTokensRaw:budget.promptTokensRaw,
+            calibrationRatio:budget.calibrationRatio,
+            inputBudget:budget.inputBudget,
+            outputBudget:budget.outputBudget,
+            safetyTokens:budget.safetyTokens,
+            reasoningReservation:budget.reasoningReservation,
+            droppedMessages:budget.droppedMessages,
+            trimmed:budget.trimmed,
+            messages:budget.messages,
+            requestedMaxTokens:Number(maxTokens) || 0,
+            effectiveMaxTokens,
+            body
+        };
+    }
+    return {plan};
+})();
+
+function applyModelCatalog(list, sourceLabel, cached=false) {
+    modelCatalog = list || [];
+    const providerId = ProviderAdapter.forCurrent().provider.id;
+    modelCatalogMeta = {};
+    ModelRegistry.clear(providerId);
+    modelCatalog.forEach(x => { modelCatalogMeta[x.id] = x.meta || {}; });
+    ModelRegistry.registerMany(modelCatalog, providerId);
+    const sel = $("model-select");
+    const previous = sel.value || getSelectedModel();
+    sel.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    modelCatalog.forEach(x => {
+        const o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = x.label;
+        frag.appendChild(o);
+    });
+    sel.appendChild(frag);
+    if (previous && [...sel.options].some(o => o.value === previous)) {
+        sel.value = previous;
+    } else if (previous) {
+        const o = document.createElement("option");
+        o.value = previous;
+        o.textContent = "当前：" + previous + "（列表未返回）";
+        sel.insertBefore(o, sel.firstChild);
+        sel.value = previous;
+    } else if (sel.options.length) {
+        sel.selectedIndex = 0;
+    }
+    const suffix = cached ? " · 缓存" : " · 刚更新";
+    setModelStatus(`自动模型 ${modelCatalog.length} 个${suffix}`, "ok");
+    updateModelBadge();
+    updateBudgetMeter();
+}
+
+function restoreCachedModels() {
+    try {
+        const raw = appStorage.getItem(modelCacheKey());
+        if (!raw) return false;
+        const cache = JSON.parse(raw);
+        if (!cache?.savedAt || !Array.isArray(cache.models)) return false;
+        if (Date.now() - cache.savedAt > MODEL_CACHE_TTL) return false;
+        applyModelCatalog(cache.models, getProviderLabel(), true);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function modelMeta(model) {
+    const providerId = ProviderAdapter.forCurrent().provider.id;
+    return ModelRegistry.get(model, providerId)?.meta || modelCatalogMeta?.[model] || {};
+}
+
+async function fetchModels(opts={}) {
+    const { force=false, silent=false } = opts;
+    const key = $("api-key")?.value.trim();
+    const adapter = ProviderAdapter.forCurrent();
+    const ep = adapter.modelsEndpoint;
+    if (!key || !ep) {
+        if (!silent) setModelStatus("请先填写 API Key", "err");
+        return false;
+    }
+    if (modelFetchCtrl) modelFetchCtrl.abort();
+    modelFetchCtrl = new AbortController();
+    const timer = setTimeout(() => modelFetchCtrl?.abort(), 12000);
+    const btn = $("refresh-models-btn");
+    if (btn) { btn.disabled = true; btn.textContent = "↻ 获取中…"; }
+    if (!silent) setModelStatus("正在获取当前账号可用模型…");
+    try {
+        if (!force && restoreCachedModels()) return true;
+        const headers = adapter.headers(key, true);
+        const res = await fetch(ep, { method:"GET", headers, signal:modelFetchCtrl.signal });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(friendlyHttpError(res.status, data));
+        const list = normalizeModelList(data, adapter.provider.id);
+        if (!list.length) throw new Error("接口返回模型列表为空，或列表中的模型不适合 chat/completions。");
+        appStorage.setItem(modelCacheKey(), JSON.stringify({ savedAt: Date.now(), providerId: adapter.provider.id, source:"provider-api", models: list }));
+        applyModelCatalog(list, getProviderLabel(), false);
+        return true;
+    } catch (e) {
+        if (e.name === "AbortError") {
+            if (!silent) setModelStatus("获取模型已取消", "err");
+        } else {
+            setModelStatus((e.message || "获取模型失败") + " · 保留预设/手动模型", "err");
+            if (!silent) setStatus("模型同步失败", "err");
+        }
+        return false;
+    } finally {
+        clearTimeout(timer);
+        modelFetchCtrl = null;
+        if (btn) { btn.disabled = false; btn.textContent = "↻ 获取模型"; }
+    }
+}
+
+function scheduleModelFetch() {
+    clearTimeout(modelFetchTimer);
+    modelFetchTimer = setTimeout(() => {
+        if ($("api-key")?.value.trim()) fetchModels({silent:true});
+    }, 500);
+}
+
+function getSelectedModel() {
+    const manual = $("model-manual").value.trim();
+    return manual || $("model-select").value;
+}
+
+function updateModelBadge() {
+    const model = getSelectedModel() || "—";
+    const short = model.length > 28 ? model.slice(0, 26) + "…" : model;
+    $("model-badge").textContent = getProviderLabel() + " · " + short;
+    $("model-badge").title = getProviderLabel() + " · " + model;
+    if (isImageModel(model)) {
+        setStatus("当前为生图/修图模型，聊天接口可能不可用", "err");
+    }
+    updateBudgetMeter();
+}
+
+function currentModelCapabilities() {
+    const model = getSelectedModel();
+    const provider = ProviderAdapter.forCurrent().provider;
+    const cap = CapabilityResolver.resolve(model, provider);
+    // Keep the old flat shape for V10.7 callers while exposing structured facts.
+    return {
+        reasoning:cap.reasoning.value === true, vision:cap.vision.value === true, toolUse:cap.tools.value === true,
+        context:cap.contextLength || 0, maxOut:cap.maxOutputTokens || 0,
+        provider:cap.provider, providerId:cap.providerId, protocol:cap.protocol, metaSource:cap.source,
+        tokenParameter:cap.tokenParameter, reasoningParameter:cap.reasoningParameter,
+        capabilities:cap
+    };
+}
+
+function estimateTokens(value) {
+    if (value == null) return 0;
+    if (typeof value !== "string") { try { value = JSON.stringify(value); } catch (_) { value = String(value); } }
+    const text = String(value);
+    if (!text) return 0;
+    const cjk = (text.match(/[\u3400-\u9fff]/g) || []).length;
+    const other = text.length - cjk;
+    return Math.ceil(cjk * 1.2 + other / 4);
+}
+
+function estimatePromptTokens(messages, sys, currentText) {
+    let n = estimateTokens(sys) + estimateTokens(currentText) + 4;
+    for (const m of messages || []) n += estimateTokens(m.content) + 4;
+    return Math.max(1, n);
+}
+
+function getReasoningAutoBudget(eff) {
+    if (eff === "none") return 0;
+    // SiliconFlow/Qwen3.8-27B 的 thinking_budget 官方上限为 32K。
+    if (eff === "low") return 8192;
+    return 32768;
+}
+
+function updateBudgetMeter(extraPrompt, plan=null) {
+    const el = $("budget-meter");
+    if (!el) return;
+    const model = getSelectedModel();
+    const cap = currentModelCapabilities();
+    const requested = safeTokens();
+    const eff = $("reasoning-effort-select")?.value || "default";
+    const reasoningBudget = cap.reasoning ? getReasoningAutoBudget(eff) : 0;
+    const totalRequested = Math.max(requested, reasoningBudget || requested);
+    const ctx = cap.context || 0;
+    let text = `模型：${model || "—"} · `;
+    text += cap.reasoning ? `🧠 支持思考 · 思考预算 ${reasoningBudget ? Math.round(reasoningBudget/1024)+"K" : "关闭"}` : "🧠 未确认支持思考";
+    if (cap.maxOut) text += ` · 模型上限 ${Math.round(cap.maxOut/1024)}K`;
+    if (ctx) text += ` · 上下文 ${Math.round(ctx/1024)}K`;
+    if (extraPrompt != null && ctx) {
+        const pct = Math.min(100, Math.round(extraPrompt / ctx * 100));
+        text += ` · 当前输入约 ${Math.round(extraPrompt/1024)}K（${pct}%）`;
+        el.classList.toggle("warn", pct >= 80);
+    } else el.classList.remove("warn");
+    if (plan?.trimmed) text += ` · 已自动裁剪 ${plan.droppedMessages} 条旧消息`;
+    if (plan?.inputBudget > 0 && ctx) text += ` · 输入预算 ${Math.round(plan.inputBudget/1024)}K`;
+    const qwen38 = /qwen\/?qwen3\.8-27b/i.test(model) && cap.providerId === "siliconflow";
+    if (qwen38 && eff !== "none") text += ` · 硅基思考上限 ${Math.round(getReasoningAutoBudget(eff)/1024)}K`;
+    if (plan?.reasoningReservation > 0) text += ` · 上下文预留思考 ${Math.round(plan.reasoningReservation/1024)}K`;
+    text += ` · 输出预算 ${Math.round((plan?.effectiveMaxTokens || totalRequested)/1024)}K`;
+    el.textContent = text;
+}
+
+function updateTokenChips() {
+    const v = parseInt($("max-tokens").value, 10);
+    document.querySelectorAll(".token-chip").forEach(c => c.classList.toggle("active", parseInt(c.dataset.v, 10) === v));
+}
+
+function toggleKeyVis() {
+    const el = $("api-key");
+    el.type = el.type === "password" ? "text" : "password";
+}
+
+function resetSys() {
+    $("system-prompt").value = "你是一个高智商、友好且精通各领域的 AI 助手。";
+    onSetting();
+}
+
+function onSetting(immediate) {
+    if (!autoSave) return;
+    clearTimeout(saveTimer);
+    if (immediate) {
+        saveSettings();
+        return;
+    }
+    saveTimer = setTimeout(saveSettings, 200);
+}
+
+function saveSettings() {
+    if (!autoSave) return;
+    try {
+        setCurrentProviderKey($("api-key").value.trim());
+        appStorage.setItem("v9_base", $("base-url-select").value);
+        appStorage.setItem("v9_custom", $("custom-base-url").value.trim());
+        appStorage.setItem("v9_model", getSelectedModel());
+        appStorage.setItem("v9_reasoning_effort", $("reasoning-effort-select").value);
+        appStorage.setItem("v9_sys", $("system-prompt").value);
+        appStorage.setItem("v9_tokens", $("max-tokens").value);
+        appStorage.setItem("v9_turns", $("max-turns").value);
+        appStorage.setItem("v9_img_turns", $("max-img-turns").value);
+        appStorage.setItem("v9_temp", $("temp").value);
+        appStorage.setItem("v9_auto_save", "true");
+    } catch (e) {
+        console.warn("配置保存失败", e);
+    }
+}
+
+function toggleSave() {
+    autoSave = !autoSave;
+    appStorage.setItem("v9_auto_save", autoSave ? "true" : "false");
+    if (autoSave) { saveSettings(); setStatus("已开启记忆"); }
+    else {
+        ["v9_key","v9_base","v9_custom","v9_model","v9_reasoning_effort","v9_sys","v9_tokens","v9_turns","v9_img_turns","v9_temp","v9_provider_keys"].forEach(k => { appStorage.removeItem(k); try { window.localStorage.removeItem(k); } catch (e) {} });
+        appStorage.clearPrefix("v10_model_cache:");
+        $("api-key").value = "";
+        updateKeyProviderHint();
+        setStatus("已关闭记忆");
+    }
+    updateSaveBtn();
+}
+
+function updateSaveBtn() {
+    const btn = $("save-toggle-btn");
+    if (autoSave) { btn.textContent = "💾 已保存配置"; btn.className = "btn btn-ok"; }
+    else { btn.textContent = "❌ 未保存配置"; btn.className = "btn btn-warn"; }
+}
+
+function getEndpoint() {
+    const raw = $("base-url-select").value === "custom" ? $("custom-base-url").value.trim() : $("base-url-select").value;
+    return ProviderRegistry.endpoint(raw, "chat");
+}
+
+function getModelsEndpoint() {
+    const raw = $("base-url-select").value === "custom" ? $("custom-base-url").value.trim() : $("base-url-select").value;
+    return ProviderRegistry.endpoint(raw, "models");
+}
+
+function adaptModel(model, endpoint) {
+    const provider = ProviderRegistry.resolve(endpoint);
+    return adaptModelForProvider(model, provider);
+}
+
+function safeTokens() {
+    const v = parseInt($("max-tokens").value, 10);
+    if (isNaN(v) || v <= 0) return 8192;
+    return Math.min(Math.max(v, 256), 393216);
+}
+
+function setStatus(t, kind) {
+    $("status-text").textContent = t || "就绪";
+    const dot = $("status-dot");
+    dot.className = "status-dot" + (kind === "busy" ? " busy" : kind === "err" ? " err" : "");
+}
+
+function clearHistory() {
+    if (!confirm("确认清空当前会话的消息？")) return;
+    history = [];
+    ContextCompressor.clearSummary(currentSessionId);
+    saveMessagesFor(currentSessionId, []);
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (s) { s.preview = ""; s.title = "新对话"; s.updatedAt = Date.now(); }
+    persistSessionsMeta();
+    renderSessionList();
+    $("chatbox").innerHTML = '<div class="empty-hint" id="empty-hint">开始一次新的对话吧</div>';
+    updateContextSummaryStatus();
+    setStatus("已清空当前会话");
+}
+
+function buildRequestHistory(maxTurns, maxImgTurns) {
+    const source = Array.isArray(history) ? history : [];
+    const selected = [];
+    let users = 0;
+    for (let i = source.length - 1; i >= 0; i--) {
+        const m = source[i];
+        if (m.role === "user") {
+            users++;
+            if (users > maxTurns) break;
+        }
+        selected.push(m);
+    }
+    selected.reverse();
+    const keepImageIndexes = new Set();
+    let kept = 0;
+    for (let i = selected.length - 1; i >= 0 && kept < maxImgTurns; i--) {
+        const m = selected[i];
+        if (m.role === "user" && Array.isArray(m.content) && m.content.some(p => p.type === "image_url")) {
+            keepImageIndexes.add(i);
+            kept++;
+        }
+    }
+    return selected.map((m, idx) => {
+        if (m.role !== "user" || !Array.isArray(m.content)) return { role:m.role, content:m.content };
+        const parts = [];
+        const hasImage = m.content.some(p => p.type === "image_url");
+        for (const p of m.content) if (p.type !== "image_url" || keepImageIndexes.has(idx)) parts.push(p);
+        if (hasImage && !keepImageIndexes.has(idx)) {
+            const text = parts.filter(p => p.type === "text").map(p => p.text || "").join("\n");
+            return { role:"user", content:(text.trim() ? text.trim()+"\n" : "")+"[此前图片已降级为占位]" };
+        }
+        return { role:"user", content:parts.length === 1 && parts[0].type === "text" ? parts[0].text : parts };
+    });
+}
+
+function saveHistory() {
+    saveMessagesFor(currentSessionId, history);
+    touchSessionMeta();
+}
+
+function userHtml(m) {
+    if (m.displayContent) return m.displayContent;
+    if (Array.isArray(m.content)) {
+        let h = "";
+        m.content.forEach(p => {
+            if (p.type === "image_url" && p.image_url?.url) h += `<img src="${escAttr(p.image_url.url)}" class="msg-img" alt="">`;
+            else if (p.type === "text") h += `<div>${esc(p.text || "")}</div>`;
+        });
+        return h || "[空]";
+    }
+    return `<div>${esc(String(m.content || ""))}</div>`;
+}
+
+function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function fmt(text) {
+    if (!text) return "";
+    // APK 是 file:// 本地页面，外部 CDN 失败时也必须保持“可用且安全”。
+    // 没有 DOMPurify 时宁可退回纯文本，也不把 marked 的原始 HTML 直接写入 DOM。
+    if (!window.marked || !window.DOMPurify) return esc(String(text)).replace(/\n/g,"<br>");
+    try {
+        return DOMPurify.sanitize(marked.parse(String(text)), PURIFY_CFG);
+    } catch (_) {
+        return esc(String(text)).replace(/\n/g,"<br>");
+    }
+}
+
+function mathSafe(el) {
+    if (!window.renderMathInElement) return;
+    try {
+        renderMathInElement(el, {
+            delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+                { left: "\\(", right: "\\)", display: false },
+                { left: "\\[", right: "\\]", display: true }
+            ],
+            ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "annotation", "svg"],
+            throwOnError: false
+        });
+    } catch (e) {}
+}
+
+function addCopyAndPreview(pre) {
+    if (pre.querySelector(".btn-group-code")) return;
+    const group = document.createElement("div");
+    group.className = "btn-group-code";
+
+    const codeEl = pre.querySelector("code");
+    const codeText = codeEl ? codeEl.innerText : pre.innerText;
+
+    if (codeText.includes("<html") || codeText.includes("<svg") || codeText.includes("<!DOCTYPE html>")) {
+        const pBtn = document.createElement("button");
+        pBtn.className = "preview-btn";
+        pBtn.textContent = "▶️ 预览";
+        pBtn.onclick = () => openPreviewModal(codeText);
+        group.appendChild(pBtn);
+    }
+
+    const b = document.createElement("button");
+    b.className = "copy-btn"; b.textContent = "复制";
+    b.onclick = async () => {
+        const ok = await copyTextSafe(codeText);
+        b.textContent = ok ? "已复制" : "复制失败";
+        setTimeout(() => b.textContent = "复制", 1500);
+    };
+    group.appendChild(b);
+    pre.insertBefore(group, pre.firstChild);
+}
+
+let previewOpenToken = 0;
+let previewWriteTimer = null;
+
+function clearPreviewWriteTimer() {
+    if (previewWriteTimer) {
+        clearTimeout(previewWriteTimer);
+        previewWriteTimer = null;
+    }
+}
+
+function openPreviewModal(htmlCode) {
+    const modal = $("code-modal");
+    const frame = $("preview-frame");
+    const source = String(htmlCode ?? "");
+    const token = ++previewOpenToken;
+
+    clearPreviewWriteTimer();
+    modal.style.display = "flex";
+
+    // V9.6.1 的验证过的加载路径：直接把 HTML 写入 iframe 文档。
+    // V11.2.2 的 sandbox + Blob URL 在 Android WebView/WebToApp 中仍会白屏，
+    // 因此这里先恢复单变量兼容基线，不再同时引入 Blob、sandbox 等额外变量。
+    try {
+        frame.onload = () => {
+            if (token !== previewOpenToken) return;
+            clearPreviewWriteTimer();
+            frame.removeAttribute("aria-busy");
+        };
+        frame.onerror = () => {
+            if (token !== previewOpenToken) return;
+            clearPreviewWriteTimer();
+            frame.removeAttribute("aria-busy");
+            console.warn("Preview iframe load error");
+        };
+        frame.setAttribute("aria-busy", "true");
+
+        const doc = frame.contentWindow.document;
+        doc.open();
+        doc.write(source);
+        doc.close();
+
+        // 不依赖 iframe 的 error 事件（HTML 文档中的脚本异常通常不会触发它）。
+        // 超时只做诊断，不主动替换已经写入的文档，避免 Android WebView 时序误判。
+        previewWriteTimer = setTimeout(() => {
+            previewWriteTimer = null;
+            if (token !== previewOpenToken) return;
+            frame.removeAttribute("aria-busy");
+            try {
+                const bodyText = frame.contentWindow?.document?.body?.innerText || "";
+                if (!bodyText.trim() && !frame.contentWindow?.document?.body?.children?.length) {
+                    console.warn("Preview document is still empty after timeout");
+                }
+            } catch (e) {
+                console.warn("Preview diagnostic failed", e);
+            }
+        }, 1800);
+    } catch (e) {
+        clearPreviewWriteTimer();
+        frame.removeAttribute("aria-busy");
+        console.warn("Preview document.write unavailable", e);
+        try {
+            const doc = frame.contentWindow.document;
+            doc.open();
+            doc.write('<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:24px;color:#b91c1c">预览加载失败：当前 WebView 不允许写入预览文档。</body>');
+            doc.close();
+        } catch (_) {
+            try {
+                frame.srcdoc = '<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:24px;color:#b91c1c">预览加载失败：当前 WebView 不支持实时预览。</body>';
+            } catch (_) {}
+        }
+    }
+}
+
+function closePreviewModal() {
+    ++previewOpenToken;
+    clearPreviewWriteTimer();
+    const frame = $("preview-frame");
+    $("code-modal").style.display = "none";
+    frame.removeAttribute("aria-busy");
+    frame.onload = null;
+    frame.onerror = null;
+    try {
+        const doc = frame.contentWindow.document;
+        doc.open();
+        doc.write("");
+        doc.close();
+    } catch (_) {}
+    frame.src = "about:blank";
+    frame.removeAttribute("srcdoc");
+}
+
+async function copyTextSafe(text) {
+    const value = String(text ?? "");
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return true;
+        }
+    } catch (e) {}
+    try {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        return ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+function copyMsg(idx) {
+    if (!history[idx]) return;
+    let t = history[idx].content;
+    if (Array.isArray(t)) t = t.filter(p => p.type === "text").map(p => p.text).join("\n");
+    copyTextSafe(typeof t === "string" ? t : JSON.stringify(t)).then(ok => setStatus(ok ? "已复制" : "复制失败", ok ? undefined : "err"));
+}
+
+async function retryMsg(idx) {
+    if (abortCtrl) { alert("请先停止当前生成"); return; }
+    let userIndex = -1;
+    for (let i = Math.min(idx - 1, history.length - 1); i >= 0; i--) if (history[i].role === "user") { userIndex = i; break; }
+    if (userIndex < 0) return;
+    const u = history[userIndex];
+    currentAttachment = null;
+    let text = "";
+    if (Array.isArray(u.content)) {
+        const img = u.content.find(p => p.type === "image_url" && p.image_url?.url);
+        if (img) currentAttachment = { type:"image", data:img.image_url.url, name:"重试图片" };
+        text = u.content.filter(p => p.type === "text").map(p => p.text || "").join("\n");
+    } else text = String(u.content || "");
+    history = history.slice(0, userIndex + 1);
+    saveHistory();
+    $("text-input").value = text;
+    autoGrow($("text-input"));
+    // 重试图片时保留原始 data URL；sendMsg(reuseExistingUser) 会直接复用它。
+    if (currentAttachment) {
+        const old = currentAttachment;
+        const pc = $("preview-content");
+        if (pc) pc.innerHTML = old.type === "image" ? `<img src="${escAttr(old.data)}" alt="重试图片">` : `📄 ${esc(old.name || "文档")}`;
+        $("preview-bar").style.display = "flex";
+    }
+    await sendMsg({ reuseExistingUser:true });
+}
+
+function exportMarkdown() {
+    if (!history.length) { alert("无记录"); return; }
+    let md = "# 对话导出\n\n";
+    history.forEach(m => {
+        const role = m.role === "user" ? "User" : "AI";
+        let body = Array.isArray(m.content)
+            ? m.content.map(p => p.type === "text" ? p.text : "[图片]").join("\n")
+            : String(m.content || "");
+        md += `**${role}**\n\n${body}\n\n---\n\n`;
+    });
+    const a = document.createElement("a");
+    const blobUrl = URL.createObjectURL(new Blob([md], { type: "text/markdown;charset=utf-8" }));
+    a.href = blobUrl;
+    a.download = `chat_${Date.now()}.md`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+}
+
+
+function exportConfig() {
+    const cfg = {
+        version: 10.2,
+        base: $("base-url-select").value,
+        custom: $("custom-base-url").value.trim(),
+        model: getSelectedModel(),
+        reasoning_effort: $("reasoning-effort-select").value,
+        sys: $("system-prompt").value,
+        tokens: $("max-tokens").value,
+        turns: $("max-turns").value,
+        img_turns: $("max-img-turns").value,
+        temp: $("temp").value,
+        theme: themeMode,
+        provider_keys: undefined
+    };
+    const safe = {...cfg}; delete safe.provider_keys;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(safe, null, 2)], { type: "application/json" }));
+    a.download = "fsy_ai_v10_2_config_" + Date.now() + ".json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setStatus("配置已导出（已自动排除 API Key）");
+}
+
+function importConfig() {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "application/json,.json";
+    inp.onchange = async () => {
+        const f = inp.files?.[0];
+        if (!f) return;
+        try {
+            const cfg = JSON.parse(await f.text());
+            if (cfg.provider_keys && typeof cfg.provider_keys === "object") {
+                saveProviderKeys(cfg.provider_keys);
+            }
+            if (cfg.base) {
+                const sel = $("base-url-select");
+                if ([...sel.options].some(o => o.value === cfg.base)) sel.value = cfg.base;
+                else {
+                    sel.value = "custom";
+                    $("custom-url-wrap").style.display = "block";
+                    if (cfg.custom) $("custom-base-url").value = cfg.custom;
+                }
+            }
+            if (cfg.custom) $("custom-base-url").value = cfg.custom;
+            rebuildModels($("base-url-select").value);
+            if (cfg.model) {
+                if ([...$("model-select").options].some(o => o.value === cfg.model)) {
+                    $("model-select").value = cfg.model;
+                    $("model-manual").value = "";
+                } else $("model-manual").value = cfg.model;
+            }
+            if (cfg.reasoning_effort) $("reasoning-effort-select").value = cfg.reasoning_effort;
+            if (cfg.sys != null) $("system-prompt").value = cfg.sys;
+            if (cfg.tokens) $("max-tokens").value = cfg.tokens;
+            if (cfg.turns) $("max-turns").value = cfg.turns;
+            if (cfg.img_turns) $("max-img-turns").value = cfg.img_turns;
+            if (cfg.temp) { $("temp").value = cfg.temp; $("temp-val").textContent = cfg.temp; }
+            if (cfg.theme) { themeMode = cfg.theme; appStorage.setItem("v9_theme", themeMode); applyTheme(); }
+            lastProviderId = providerKeyId();
+            syncKeyInputFromProvider();
+            updateTokenChips();
+            updateModelBadge();
+            updateKeyProviderHint();
+            if (autoSave) saveSettings();
+            setStatus("配置已导入");
+            alert("✅ 配置导入成功\nAPI Key 不会随 V10 配置导出文件保存，请在本机重新填写。");
+        } catch (e) {
+            alert("导入失败: " + e.message);
+        }
+    };
+    inp.click();
+}
+
+async function testConnection() {
+    const key = $("api-key").value.trim();
+    const adapter = ProviderAdapter.forCurrent();
+    const modelsEp = adapter.modelsEndpoint;
+    const rawModel = getSelectedModel();
+    const model = adapter.adaptModel(rawModel);
+    if (!key || !modelsEp) { alert("请填写 Key 与接口"); return; }
+    if (isImageModel(rawModel)) {
+        alert("当前模型为生图/修图模型，聊天连通测试不适用。\n请改选对话模型后再测。");
+        setStatus("生图模型跳过聊天测试", "err");
+        return;
+    }
+
+    setStatus("测试中…", "busy");
+    const t0 = performance.now();
+    try {
+        const headers = adapter.headers(key, true);
+        const res = await fetch(modelsEp, { method:"GET", headers });
+        const ms = Math.round(performance.now() - t0);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+            const list = normalizeModelList(data, adapter.provider.id);
+            const found = list.some(x => x.id === rawModel || x.id === model);
+            if (list.length) {
+                appStorage.setItem(modelCacheKey(), JSON.stringify({ savedAt: Date.now(), providerId: adapter.provider.id, source:"provider-api", models: list }));
+                applyModelCatalog(list, getProviderLabel(), false);
+            }
+            setStatus("连接成功 · 模型列表 " + list.length + " 个 · " + ms + "ms");
+            alert("✅ 接口连接成功\n供应商: " + getProviderLabel() +
+                  "\n可用对话模型: " + list.length + " 个" +
+                  "\n当前模型: " + model +
+                  (found ? "\n当前模型已在列表中" : "\n⚠️ 当前模型未出现在列表中，请检查模型 ID") +
+                  "\n耗时: " + ms + " ms");
+            return;
+        }
+        // 某些 OpenAI 兼容代理没有 /models，退回最小 chat 测试。
+        const chatEp = getEndpoint();
+        const chatRes = await fetch(chatEp, {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+            body: JSON.stringify({ model, messages:[{role:"user",content:"hi"}], max_tokens:8, stream:false })
+        });
+        const chatMs = Math.round(performance.now() - t0);
+        const chatData = await chatRes.json().catch(() => ({}));
+        if (!chatRes.ok) {
+            setStatus("失败 " + chatRes.status, "err");
+            alert("❌ 模型列表接口失败：" + friendlyHttpError(res.status, data) +
+                  "\n\n聊天接口也失败：" + friendlyHttpError(chatRes.status, chatData));
+            return;
+        }
+        setStatus("聊天接口连通 · " + (chatData.model || model) + " · " + chatMs + "ms");
+        alert("✅ 聊天接口连通成功\n供应商: " + getProviderLabel() +
+              "\n模型: " + (chatData.model || model) +
+              "\n注意：该接口未提供可读取的 /models 列表。");
+    } catch (e) {
+        setStatus("网络异常", "err");
+        alert("❌ 网络异常：" + (e.message || e));
+    }
+}
+
+function openAttachModal() { $("attach-modal").style.display = "flex"; }
+function closeAttachModal() { $("attach-modal").style.display = "none"; }
+function triggerFile(accept) {
+    closeAttachModal();
+    const f = $("file-input");
+    f.accept = accept; f.value = ""; f.click();
+}
+function importImageLink() {
+    closeAttachModal();
+    const url = prompt("图片 URL:");
+    if (url?.trim()) { currentAttachment = { type: "image", data: url.trim() }; showPreview(); }
+}
+function onFilePicked(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+
+function processFile(file) {
+    const MAX_TEXT = 2 * 1024 * 1024;
+    const MAX_IMAGE = 15 * 1024 * 1024;
+    if (file.size > MAX_IMAGE) { alert("图片超过 15 MB，建议先压缩后再上传。"); return; }
+    if (file.type.startsWith("image/")) {
+        const r = new FileReader();
+        r.onload = ev => compressImg(ev.target.result).then(d => {
+            if (!d) { alert("图片处理失败，请换一张图片重试。"); return; }
+            currentAttachment = { type: "image", data: d, name: file.name };
+            showPreview();
+        }).catch(() => alert("图片处理失败，请换一张图片重试。"));
+        r.onerror = () => alert("图片读取失败");
+        r.readAsDataURL(file);
+    } else {
+        if (file.size > MAX_TEXT) { alert("文档超过 2 MB。V10 暂不把超大文档一次性塞进上下文，请拆分后上传。"); return; }
+        const r = new FileReader();
+        r.onload = ev => {
+            currentAttachment = { type: "text", data: ev.target.result, name: file.name };
+            showPreview();
+        };
+        r.onerror = () => alert("文档读取失败");
+        r.readAsText(file);
+    }
+}
+
+function compressImg(dataUrl) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const max = 1600;
+            if (img.width <= max && img.height <= max && dataUrl.length < 1.5e6) { resolve(dataUrl); return; }
+            const s = Math.min(1, max / Math.max(img.width, img.height));
+            const c = document.createElement("canvas");
+            c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+            const ctx = c.getContext("2d");
+            if (!ctx) { resolve(dataUrl); return; }
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            resolve(c.toDataURL("image/jpeg", 0.85));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
+function showPreview() {
+    const bar = $("preview-bar"), content = $("preview-content");
+    bar.style.display = "flex";
+    content.innerHTML = "";
+    if (currentAttachment.type === "image") {
+        const img = document.createElement("img");
+        img.src = currentAttachment.data;
+        img.alt = "";
+        const name = document.createElement("span");
+        name.style.cssText = "font-size:12px;color:var(--text3);";
+        name.textContent = currentAttachment.name || "图片";
+        content.append(img, name);
+    } else {
+        const badge = document.createElement("span");
+        badge.className = "doc-badge";
+        badge.textContent = `📄 ${currentAttachment.name || "文档"} (${currentAttachment.data.length} 字)`;
+        content.appendChild(badge);
+    }
+}
+
+function clearAttachment() {
+    currentAttachment = null;
+    $("preview-bar").style.display = "none";
+    $("file-input").value = "";
+}
+
+function autoGrow(el) {
+    el.style.height = "42px";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+}
+
+if (window.marked) {
+    marked.setOptions({
+        highlight(code, lang) {
+            if (window.hljs && lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(code, { language: lang }).value;
+                } catch (e) {}
+            }
+            return code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    });
+}
+
+function handleSendOrStop() {
+    if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; return; }
+    sendMsg();
+}
+
+async function sendMsg(options={}) {
+    if (abortCtrl) return;
+    const reuseExistingUser = !!options.reuseExistingUser;
+    // 重试已有用户消息时，附件已经保存在 history 中，不应再次作为“待发送附件”残留到下一条消息。
+    if (reuseExistingUser && currentAttachment) { currentAttachment = null; $("preview-bar").style.display = "none"; }
+    const key = $("api-key").value.trim();
+    const ep = getEndpoint();
+    const txt = $("text-input").value.trim();
+    const rawModel = getSelectedModel();
+    const model = adaptModel(rawModel, ep);
+    const sys = $("system-prompt").value.trim();
+    const maxTok = safeTokens();
+    const temp = parseFloat($("temp").value) || 0.7;
+    const maxTurns = parseInt($("max-turns").value, 10) || 10;
+    const maxImgTurns = parseInt($("max-img-turns").value, 10) || 2;
+    const reasoningEffort = $("reasoning-effort-select").value;
+    if (!key) { alert("请输入 API Key"); return; }
+    if (!ep) { alert("请设置接口"); return; }
+    if (!reuseExistingUser && !txt && !currentAttachment) { alert("请输入内容或附件"); return; }
+    if (isImageModel(rawModel)) { alert("当前模型是生图/修图模型，本客户端当前走聊天接口。请选择对话模型。"); setStatus("请改选对话模型", "err"); return; }
+
+    const box = $("chatbox");
+    $("empty-hint")?.remove();
+    let bubbleHtml = "";
+    let userObj = null;
+    if (!reuseExistingUser) {
+        userObj = { role:"user" };
+        if (currentAttachment?.type === "image") {
+            bubbleHtml += `<img src="${escAttr(currentAttachment.data)}" class="msg-img" alt="">`;
+            userObj.content = [
+                { type:"text", text:txt || "请详细分析这张图片" },
+                { type:"image_url", image_url:{ url:currentAttachment.data } }
+            ];
+            userObj.hasImage = true;
+        } else if (currentAttachment?.type === "text") {
+            bubbleHtml += `<div class="doc-badge">📄 ${esc(currentAttachment.name || "文档")}</div>`;
+            userObj.content = `[文件 ${currentAttachment.name || "文档"}]:\n\`\`\`\n${currentAttachment.data}\n\`\`\`\n\n` + txt;
+        } else userObj.content = txt;
+        if (txt) bubbleHtml += `<div>${esc(txt)}</div>`;
+        const uRow = document.createElement("div");
+        uRow.className = "msg-row user";
+        uRow.innerHTML = `<div class="avatar">我</div><div class="bubble-wrap"><div class="bubble">${bubbleHtml}</div></div>`;
+        box.appendChild(uRow);
+        chatAutoFollow = true;
+        history.push({ role:"user", content:userObj.content, hasImage:!!userObj.hasImage, displayContent:bubbleHtml });
+        saveHistory();
+        clearAttachment();
+        $("text-input").value = "";
+        $("text-input").style.height = "42px";
+    }
+
+    const bRow = document.createElement("div");
+    bRow.className = "msg-row bot";
+    bRow.innerHTML = `<div class="avatar">AI</div><div class="bubble-wrap"><div class="bubble typing"><div class="reasoning-slot"></div><div class="content-slot">⏳ 连接中…</div></div><div class="msg-actions show"><span class="action-link copy-b">📋 复制</span><span class="action-link retry-b">🔄 重试</span></div></div>`;
+    box.appendChild(bRow); chatAutoFollow = true; scrollChatToBottom(true); updateScrollBottomButton();
+    const bubble = bRow.querySelector(".bubble"), rSlot=bRow.querySelector(".reasoning-slot"), cSlot=bRow.querySelector(".content-slot");
+    const sendBtn=$("send-btn"); sendBtn.textContent="停止"; sendBtn.classList.add("stop");
+
+    const adapter = ProviderAdapter.forCurrent();
+    let context = ContextManager.prepare({
+        history, systemPrompt:sys, maxTurns, maxImgTurns, sessionId:currentSessionId,
+        providerId:adapter.provider.id, model:rawModel
+    });
+    let msgs = context.messages;
+    let promptTokens = estimatePromptTokens(msgs, "", "");
+    let plan = RequestPlanner.plan({
+        adapter, rawModel, model, messages:msgs,
+        maxTokens:maxTok, temperature:temp,
+        reasoningEffort, promptTokens, calibrationRatio:context.calibrationRatio
+    });
+    if (!context.summaryActive && plan.capabilities.contextLength > 0 && plan.promptTokens > plan.capabilities.contextLength * 0.72 && history.length >= 6 && !ContextCompressor.isBusy()) {
+        try {
+            setStatus("正在压缩旧上下文…", "busy");
+            const compacted = await ContextCompressor.compact({sessionId:currentSessionId, history, adapter, model, contextLength:plan.capabilities.contextLength});
+            if (compacted.ok) {
+                context = ContextManager.prepare({history, systemPrompt:sys, maxTurns, maxImgTurns, sessionId:currentSessionId, providerId:adapter.provider.id, model:rawModel});
+                msgs = context.messages;
+                promptTokens = estimatePromptTokens(msgs, "", "");
+                plan = RequestPlanner.plan({adapter, rawModel, model, messages:msgs, maxTokens:maxTok, temperature:temp, reasoningEffort, promptTokens, calibrationRatio:context.calibrationRatio});
+                setStatus(`已压缩 ${compacted.compactedMessages} 条旧消息`, "busy");
+            }
+        } catch (compactError) {
+            console.warn("FSY AI: 上下文压缩失败，继续使用裁剪策略", compactError);
+            setStatus("摘要失败 · 使用自动裁剪", "busy");
+        }
+    }
+    const effectiveMaxTok = plan.effectiveMaxTokens;
+    updateBudgetMeter(plan.promptTokens, plan);
+    const requestBody = plan.body;
+    if (plan.hardOverflow) {
+        bubble.classList.remove("typing");
+        cSlot.innerHTML = `⚠️ 当前输入仍超过模型上下文上限。<div style="color:var(--text3);font-size:12px;margin-top:6px;">已自动移除旧消息，但当前内容约 ${Math.round(plan.promptTokens/1024)}K，模型上下文约 ${Math.round((plan.capabilities.contextLength||0)/1024)}K。请减少本次输入/附件，或换更大上下文模型。</div>`;
+        setStatus("上下文超限", "err");
+        resetSend();
+        return;
+    }
+    if (plan.trimmed) {
+        setStatus(`上下文过长 · 已自动保留最近内容`, "busy");
+    } else if (Math.abs((plan.calibrationRatio||1) - 1) > 0.08) {
+        setStatus(`Token估算已校准 · ×${plan.calibrationRatio.toFixed(2)}`, "busy");
+    }
+    let reasoning="",reply="",firstTokenAt=0,finishReason=null,usage=null;
+    const startedAt=performance.now(); abortCtrl=new AbortController();
+    let requestTimedOut=false, timeoutReason="", responseReceived=false;
+    let firstByteTimer=null, streamIdleTimer=null, absoluteTimer=null, progressTimer=null;
+    const FIRST_BYTE_TIMEOUT=90000, STREAM_IDLE_TIMEOUT=120000, ABSOLUTE_TIMEOUT=900000;
+    const elapsedSec=()=>Math.floor((performance.now()-startedAt)/1000);
+    const clearFirstByteTimer=()=>{ if(firstByteTimer){clearTimeout(firstByteTimer);firstByteTimer=null;} };
+    const clearStreamIdleTimer=()=>{ if(streamIdleTimer){clearTimeout(streamIdleTimer);streamIdleTimer=null;} };
+    const armStreamIdleTimer=()=>{
+        clearStreamIdleTimer();
+        streamIdleTimer=setTimeout(()=>{ requestTimedOut=true; timeoutReason=`流式空闲超时（${Math.round(STREAM_IDLE_TIMEOUT/1000)}秒无新数据）`; abortCtrl?.abort(); },STREAM_IDLE_TIMEOUT);
+    };
+    firstByteTimer=setTimeout(()=>{ if(!responseReceived){requestTimedOut=true;timeoutReason=`首包超时（${Math.round(FIRST_BYTE_TIMEOUT/1000)}秒）`;abortCtrl?.abort();} },FIRST_BYTE_TIMEOUT);
+    absoluteTimer=setTimeout(()=>{ requestTimedOut=true; timeoutReason=`达到安全上限（${Math.round(ABSOLUTE_TIMEOUT/60000)}分钟）`; abortCtrl?.abort(); },ABSOLUTE_TIMEOUT);
+    setStatus("生成中 · "+model+` · Max ${Math.round(effectiveMaxTok/1024)}K`,"busy");
+    const perf=$("perf-bar"); if(perf) perf.textContent=`等待首包… · 输入≈${Math.round(plan.promptTokens/1024)}K · Max ${Math.round(effectiveMaxTok/1024)}K`;
+    progressTimer=setInterval(()=>{ if(perf)perf.textContent=`${responseReceived?"流式生成中":"等待首包"} · ${elapsedSec()}s · Max ${Math.round(effectiveMaxTok/1024)}K`; },1000);
+
+    try{
+        const headers=adapter.headers(key, true);
+        headers.Accept="text/event-stream, application/json";
+        let res=await fetch(ep,{method:"POST",headers,signal:abortCtrl.signal,body:JSON.stringify(requestBody)});
+        responseReceived=true;
+        clearFirstByteTimer();
+        if(!res.ok){const err=await res.json().catch(()=>({})); bubble.classList.remove("typing"); cSlot.textContent=friendlyHttpError(res.status,err); setStatus("失败 "+res.status,"err"); if(perf)perf.textContent="请求失败 · "+Math.round(performance.now()-startedAt)+"ms"; resetSend(); return;}
+        if(!res.body) throw new Error("浏览器不支持响应体");
+        const contentType=(res.headers.get("content-type")||"").toLowerCase();
+        if(contentType.includes("application/json")) clearStreamIdleTimer();
+        else armStreamIdleTimer();
+        const applyChunk=obj=>{
+            if(!obj||typeof obj!=="object")return;
+            if(obj.usage)usage=obj.usage;
+            const choice=obj.choices?.[0]; if(!choice)return;
+            if(choice.finish_reason!=null)finishReason=choice.finish_reason;
+            const d=choice.delta||{},message=choice.message||{};
+            const rc=d.reasoning_content??d.reasoning??message.reasoning_content??message.reasoning;
+            const cc=d.content??message.content;
+            if(typeof rc==="string"&&rc)reasoning+=rc;
+            if(typeof cc==="string"&&cc){if(!firstTokenAt)firstTokenAt=performance.now();reply+=cc;}
+            if(rc||cc) schedule();
+        };
+        let raf=0,lastAutoScroll=0;
+        const renderStream=()=>{raf=0;if(reasoning){if(!rSlot.querySelector("details"))rSlot.innerHTML=`<details class="reasoning-box" open><summary>🧠 思考过程</summary><div class="reasoning-text"></div></details>`;rSlot.querySelector(".reasoning-text").textContent=reasoning;}if(reply)cSlot.textContent=reply;const now=performance.now();if(now-lastAutoScroll>80){if(chatAutoFollow||isChatNearBottom(box,80)) box.scrollTop=box.scrollHeight; updateScrollBottomButton(); lastAutoScroll=now;}};
+        const schedule=()=>{if(!raf)raf=requestAnimationFrame(renderStream);};
+        const parseJSONResponse=async()=>{const data=await res.json(); if(data?.choices?.[0]?.finish_reason!=null)finishReason=data.choices[0].finish_reason; applyChunk(data); return data;};
+        if(contentType.includes("application/json")){await parseJSONResponse();}
+        else{
+            const reader=res.body.getReader(),decoder=new TextDecoder("utf-8"); let buffer="",parseErrors=0;
+            const parseEvent=block=>{const lines=block.split(/\n/),dataLines=[];for(const raw of lines){const line=raw.replace(/\r$/,'');if(/^data\s*:/i.test(line))dataLines.push(line.replace(/^data\s*:/i,'').trim());}if(!dataLines.length)return;const joined=dataLines.join("\n").trim();if(!joined||joined==="[DONE]")return;try{applyChunk(JSON.parse(joined));}catch(_){parseErrors++;}};
+            while(true){const {value,done}=await reader.read();if(done)break;armStreamIdleTimer();buffer+=decoder.decode(value,{stream:true}).replace(/\r\n/g,"\n").replace(/\r/g,"\n");let sep;while((sep=buffer.indexOf("\n\n"))!==-1){parseEvent(buffer.slice(0,sep));buffer=buffer.slice(sep+2);}}
+            buffer+=decoder.decode();
+            if(buffer.trim()) {
+                const raw = buffer.trim();
+                if(raw.startsWith("{") && raw.endsWith("}")) { try { applyChunk(JSON.parse(raw)); } catch(_) { parseEvent(buffer); } }
+                else parseEvent(buffer);
+            }
+            if(raf){cancelAnimationFrame(raf);raf=0;renderStream();}
+            if(parseErrors&&!reply&&!reasoning) throw new Error("SSE 流式响应解析失败");
+        }
+        bubble.classList.remove("typing");
+        if(reasoning){rSlot.innerHTML=`<details class="reasoning-box"><summary>🧠 思考过程</summary><div class="reasoning-text"></div></details>`;rSlot.querySelector(".reasoning-text").innerHTML=fmt(reasoning);}
+        if(!reply){
+            if(finishReason==="length")cSlot.innerHTML=`<div>⚠️ 输出达到 Token 上限，最终正文未完整生成。</div><div style="color:var(--text3);font-size:12px;margin-top:6px;">本次 Max ≈ ${Math.round(effectiveMaxTok/1024)}K；如有思考过程，可提高 Max Tokens 或降低思考强度。</div>`;
+            else if(finishReason==="content_filter")cSlot.innerHTML="⚠️ 模型输出被内容过滤策略截断。";
+            else if(finishReason==="insufficient_system_resource")cSlot.innerHTML="⚠️ 服务端推理资源不足，本次生成被中断，请稍后重试。";
+            else if(reasoning)cSlot.innerHTML="⚠️ 模型返回了思考过程，但没有最终正文。请重试或提高 Max Tokens。";
+            else cSlot.innerHTML="⚠️ 模型未返回最终正文，请重试。";
+        }else cSlot.innerHTML=fmt(reply);
+        cSlot.querySelectorAll("pre").forEach(addCopyAndPreview); mathSafe(bubble);
+        const calibratedRatio = ContextManager.recordUsage({providerId:adapter.provider.id, model:rawModel, plan, usage});
+        const botIdx=history.push({role:"assistant",content:reply||"",reasoning_content:reasoning||undefined,finish_reason:finishReason,usage:usage,requestMeta:{model,provider:getProviderLabel(),prompt_tokens_est:plan.promptTokens,prompt_tokens_raw:plan.promptTokensRaw,prompt_calibration_ratio:plan.calibrationRatio,prompt_calibration_ratio_after:calibratedRatio,max_tokens:effectiveMaxTok,token_parameter:plan.tokenParameter,reasoning_effort:reasoningEffort,context_trimmed:plan.trimmed,dropped_messages:plan.droppedMessages,input_budget:plan.inputBudget,safety_tokens:plan.safetyTokens,context_source_messages:context.sourceMessages,context_selected_messages:context.selectedMessages,context_summary_active:context.summaryActive,context_summary_covered:context.summaryCoveredMessages}})-1;
+        bRow.querySelector(".copy-b").onclick=()=>copyMsg(botIdx); bRow.querySelector(".retry-b").onclick=()=>retryMsg(botIdx); saveHistory();
+        const total=performance.now()-startedAt,ttft=firstTokenAt?firstTokenAt-startedAt:null;
+        const completionTok=usage?.completion_tokens!=null?Number(usage.completion_tokens):0;
+        const speed=completionTok&&total>0?completionTok/(total/1000):(reply.length/4)/(Math.max(total,1)/1000);
+        const speedLabel=completionTok?`${speed.toFixed(1)} tok/s`:`≈${speed.toFixed(1)} tok/s`;
+        const finishLabel=finishReason?` · finish_reason=${finishReason}`:" · finish_reason=unknown";
+        const usageLabel=usage?.completion_tokens!=null?` · completion ${usage.completion_tokens} tok`:"";
+        setStatus(reply?"完成":(finishReason==="length"?"输出达到 Token 上限":"完成但无正文"),reply?undefined:"err");
+        if(perf)perf.textContent=`TTFT ${ttft?Math.round(ttft)+"ms":"—"} · 总耗时 ${Math.round(total)}ms · ${speedLabel}${finishLabel}${usageLabel}`;
+    }catch(e){
+        bubble.classList.remove("typing");
+        if(e.name==="AbortError"){
+            cSlot.innerHTML=fmt(reply||"")+`<div style="color:var(--danger);font-size:12px;margin-top:4px;">${requestTimedOut ? "⏱️ "+esc(timeoutReason || "请求超时") : "⏹️ 已中断"}</div>`;
+            if(reply||reasoning){const botIdx=history.push({role:"assistant",content:reply||"",reasoning_content:reasoning||undefined,finish_reason:"aborted",usage:usage,requestMeta:{model,provider:getProviderLabel()}})-1;bRow.querySelector(".copy-b").onclick=()=>copyMsg(botIdx);bRow.querySelector(".retry-b").onclick=()=>retryMsg(botIdx);saveHistory();}
+            setStatus(requestTimedOut ? "超时 · "+(timeoutReason || "请求超时") : "已中断", requestTimedOut ? "err" : undefined);
+            if(perf)perf.textContent=`${requestTimedOut ? "超时" : "已中断"} · ${elapsedSec()}s · ${timeoutReason || "用户停止"}`;
+        }else{cSlot.textContent="网络异常："+(e.message||e);setStatus("网络异常","err");saveHistory();}
+    } finally {
+        clearFirstByteTimer();
+        clearStreamIdleTimer();
+        if(absoluteTimer) clearTimeout(absoluteTimer);
+        if(progressTimer) clearInterval(progressTimer);
+    }
+    resetSend(); scrollChatToBottom(false); updateScrollBottomButton();
+}
+
+function buildRequestBodyLegacy(args){
+    const adapter = ProviderAdapter.forCurrent();
+    const plan = RequestPlanner.plan({
+        adapter,
+        rawModel:args.model,
+        model:args.model,
+        messages:args.msgs || [],
+        maxTokens:args.effectiveMaxTok,
+        temperature:args.temp,
+        reasoningEffort:args.reasoningEffort,
+        promptTokens:estimatePromptTokens(args.msgs || [], "", "")
+    });
+    return plan.body;
+}
+
+function escAttr(s){return String(s??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function resetSend() {
+    abortCtrl = null;
+    if (streamRenderTimer) { clearTimeout(streamRenderTimer); streamRenderTimer = null; }
+    const b = $("send-btn");
+    b.textContent = "发送";
+    b.classList.remove("stop");
+}
+</script>
+</body>
+</html>
