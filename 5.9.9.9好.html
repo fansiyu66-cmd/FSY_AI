@@ -1,0 +1,2718 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FSY AI 助手 V14.6（极速工件与现代旗舰版）</title>
+    <!-- Markdown 解析器 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script>if (!window.marked) document.write('<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>');</script>
+    <!-- 代码高亮 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.8.0/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.8.0/highlight.min.js"></script>
+    <script>if (!window.hljs) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"><\/script>');</script>
+    <!-- LaTeX 公式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- XSS 净化器 -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <!-- Mermaid 可视化引擎 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f7fb; --bg2: #ffffff; --bg3: #f0f2f8; --bg4: #e8ebf3;
+            --border: #e3e7f0; --border-soft: #eef1f7; --text: #101828; --text2: #4b5563; --text3: #98a2b3;
+            --accent: #5b5bd6; --accent-hover: #4f4fd0; --accent2: #0ea5e9; --accent-soft: rgba(91, 91, 214, .12);
+            --user-bg: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); --user-text: #fff;
+            --danger: #ef4444; --ok: #16a34a; --warn: #d97706;
+            --shadow-xs: 0 1px 2px rgba(16, 24, 40, .04); --shadow-sm: 0 1px 3px rgba(16, 24, 40, .06);
+            --shadow-md: 0 4px 14px rgba(16, 24, 40, .08); --shadow-lg: 0 18px 55px rgba(16, 24, 40, .18);
+            --scrollbar: rgba(120, 130, 150, .32);
+            color-scheme: light;
+        }
+        html.dark {
+            --bg: #0b1120; --bg2: #151d2e; --bg3: #1e2940; --bg4: #26334d;
+            --border: #26334d; --border-soft: #1c2740; --text: #edf1f9; --text2: #c2cbdc; --text3: #75839c;
+            --accent: #8b8cf5; --accent-hover: #9c9dfa; --accent2: #38bdf8; --accent-soft: rgba(139, 140, 245, .16);
+            --user-bg: linear-gradient(135deg, #5b5bd6 0%, #4338ca 100%); --user-text: #fff;
+            --danger: #f87171; --ok: #4ade80; --warn: #fbbf24;
+            --shadow-xs: 0 1px 2px rgba(0, 0, 0, .3); --shadow-sm: 0 1px 3px rgba(0, 0, 0, .35);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, .35); --shadow-lg: 0 18px 55px rgba(0, 0, 0, .55);
+            --scrollbar: rgba(150, 165, 195, .22);
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; min-width: 0; }
+        body {
+            margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+            background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; display: flex; overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #chatbox, .side-body, #session-list, .model-picker-list, #skill-list, #mistake-list {
+            scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+        }
+        #chatbox::-webkit-scrollbar, .side-body::-webkit-scrollbar, #session-list::-webkit-scrollbar, .model-picker-list::-webkit-scrollbar, #skill-list::-webkit-scrollbar, #mistake-list::-webkit-scrollbar { width: 6px; }
+        #chatbox::-webkit-scrollbar-thumb, .side-body::-webkit-scrollbar-thumb, .model-picker-list::-webkit-scrollbar-thumb, #skill-list::-webkit-scrollbar-thumb, #mistake-list::-webkit-scrollbar-thumb {
+            background: var(--scrollbar); border-radius: 99px;
+        }
+
+        #sidebar {
+            width: 310px; background: var(--bg2); border-right: 1px solid var(--border); display: flex;
+            flex-direction: column; flex-shrink: 0; transition: transform .26s cubic-bezier(.4, 0, .2, 1); z-index: 50;
+        }
+        #side-overlay {
+            display: block; position: fixed; inset: 0; background: rgba(8, 12, 20, .46); z-index: 45;
+            backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px);
+            opacity: 0; pointer-events: none; transition: opacity .26s ease; touch-action: none;
+        }
+        #side-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .side-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: 15px; }
+        .side-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 13px; font-size: 12px; }
+        .side-footer { padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; background: var(--bg2); }
+
+        label.field-label { display: block; font-weight: 650; color: var(--text2); margin-bottom: 5px; font-size: 11.5px; }
+        input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+            width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px;
+            padding: 8px 10px; font-size: 13px; color: var(--text); outline: none; font-family: inherit; transition: border-color .15s ease;
+        }
+        select {
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2375839c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px !important; cursor: pointer;
+        }
+        input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--bg2); }
+        optgroup { font-weight: bold; color: var(--accent); background: var(--bg2); }
+        option { font-weight: normal; color: var(--text); background: var(--bg3); }
+        textarea { resize: vertical; min-height: 52px; line-height: 1.5; }
+        
+        .row-2 { display: flex; gap: 8px; } .row-2 > * { flex: 1; min-width: 0; }
+        .chip-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+        .chip {
+            background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 4px 8px;
+            font-size: 11px; cursor: pointer; color: var(--text2); font-family: inherit; transition: all .14s ease;
+        }
+        .chip:hover { background: var(--accent-soft); color: var(--accent); }
+        .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .btn {
+            border: none; border-radius: 9px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; transition: all .15s ease;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .hint { font-size: 10.5px; color: var(--text3); margin-top: 4px; line-height: 1.45; }
+
+        .session-block { border-bottom: 1px solid var(--border-soft); padding-bottom: 11px; }
+        .session-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+        #session-list { display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; }
+        .session-item {
+            display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 8px; cursor: pointer;
+            border: 1px solid transparent; background: var(--bg3); transition: all .14s ease;
+        }
+        .session-item.active { border-color: var(--accent); background: var(--accent-soft); }
+        .session-item .s-title { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-item .s-del { opacity: 0; border: none; background: transparent; cursor: pointer; font-size: 14px; color: var(--text3); padding: 0 4px; }
+        .session-item:hover .s-del, .session-item.active .s-del { opacity: 1; }
+
+        /* 侧边栏专属模型聚合信息卡片 */
+        .model-card-btn {
+            width: 100%; border: 1px solid var(--border); border-radius: 11px; background: var(--bg3);
+            padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+            transition: all .16s ease;
+        }
+        .model-card-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .model-card-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+        .model-card-tag { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.3px; }
+        .model-card-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .model-card-sub { font-size: 10.5px; color: var(--text3); }
+        .model-arrow-icon { font-size: 11px; color: var(--accent); font-weight: 700; background: var(--bg2); padding: 3px 7px; border-radius: 6px; border: 1px solid var(--border); }
+
+        /* 技能插件与错题本 */
+        #skill-list, #mistake-list { display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px; }
+        .skill-item {
+            display: flex; align-items: center; justify-content: space-between; background: var(--bg3);
+            border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; gap: 8px; min-height: 40px;
+        }
+        .skill-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+        .skill-title { font-weight: 650; font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .skill-desc { font-size: 10px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .toggle-switch { position: relative; display: inline-block; width: 34px; height: 19px; flex-shrink: 0; margin: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--border); transition: .2s; border-radius: 20px; }
+        .toggle-slider:before {
+            position: absolute; content: ""; height: 13px; width: 13px; left: 3px; bottom: 3px;
+            background-color: white; transition: .2s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+        }
+        .toggle-switch input:checked + .toggle-slider { background-color: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(15px); }
+
+        .bubble-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+        .bubble-badge {
+            font-size: 9.5px; padding: 1px 6px; border-radius: 4px; background: var(--bg3);
+            border: 1px solid var(--border); color: var(--accent); font-weight: 600;
+        }
+
+        #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; z-index: 1; }
+        #topbar {
+            height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 10px; gap: 8px; z-index: 5;
+        }
+        .top-left, .top-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .icon-btn {
+            background: transparent; border: none; color: var(--text2); font-size: 20px; cursor: pointer;
+            width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 10px; flex-shrink: 0; touch-action: manipulation; transition: background .12s, transform .1s;
+        }
+        .icon-btn:active { background: var(--bg3); transform: scale(0.92); }
+
+        /* 顶部模型快捷选择药丸 */
+        .model-badge-btn {
+            background: var(--bg3); border: 1px solid var(--border); border-radius: 20px;
+            padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--text);
+            cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+            transition: all .15s ease; max-width: 220px;
+        }
+        .model-badge-btn:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+        .model-badge-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+        .status-dot.busy { background: #f59e0b; animation: pulse 1s infinite; }
+        .status-dot.err { background: var(--danger); }
+        @keyframes pulse { 50% { opacity: .3; } }
+
+        #chatbox { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        
+        #scroll-bottom-btn {
+            position: absolute; right: 18px; bottom: 84px; z-index: 20; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--bg2); color: var(--accent); box-shadow: var(--shadow-md);
+            cursor: pointer; display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;
+            padding: 7px 14px; gap: 4px; transition: transform .15s ease, opacity .15s ease;
+        }
+        #scroll-bottom-btn:hover { background: var(--bg3); }
+        #scroll-bottom-btn.show { display: flex; }
+        .load-more-msgs { align-self: center; padding: 6px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; cursor: pointer; }
+
+        /* 消息微动效入场 */
+        .msg-row { display: flex; gap: 10px; max-width: 880px; width: 100%; margin: 0 auto; animation: msgFadeIn .18s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes msgFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .msg-row.user { flex-direction: row-reverse; }
+        .avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+        .user .avatar { background: var(--user-bg); color: #fff; }
+        .bot .avatar { background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; }
+        .bubble-wrap { display: flex; flex-direction: column; gap: 4px; max-width: calc(100% - 46px); min-width: 0; }
+        .bubble {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 15px; padding: 11px 14px;
+            font-size: 14px; line-height: 1.65; word-break: break-word; box-shadow: var(--shadow-sm);
+        }
+        .user .bubble { background: var(--user-bg); color: #fff; border: none; border-bottom-right-radius: 4px; }
+        .bot .bubble { border-bottom-left-radius: 4px; }
+        .msg-img { max-width: 220px; max-height: 220px; border-radius: 8px; margin-bottom: 6px; display: block; object-fit: contain; }
+
+        .bubble table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; display: block; overflow-x: auto; }
+        .bubble th, .bubble td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; }
+        .bubble th { background: var(--bg3); font-weight: 650; }
+        .bubble tr:nth-child(even) { background: rgba(125, 135, 155, 0.04); }
+
+        .msg-actions { display: flex; gap: 6px; font-size: 11px; opacity: 0; transition: opacity .15s ease; flex-wrap: wrap; }
+        .msg-row:hover .msg-actions, .msg-actions.show { opacity: 1; }
+        .action-link { color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: var(--bg3); }
+        .action-link:hover { color: var(--accent); }
+
+        /* 首字等待 Shimmer 流光呼吸态动效 */
+        .typing-loading-wrap { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+        .shimmer-wave {
+            width: 100%; max-width: 200px; height: 11px; border-radius: 6px;
+            background: linear-gradient(90deg, rgba(91, 91, 214, 0.08) 25%, rgba(91, 91, 214, 0.25) 50%, rgba(91, 91, 214, 0.08) 75%);
+            background-size: 200% 100%; animation: shimmerMove 1.4s infinite linear;
+        }
+        @keyframes shimmerMove { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .typing-tip-text { font-size: 12px; color: var(--text3); animation: tipPulse 1.8s infinite ease-in-out; }
+        @keyframes tipPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* DeepSeek 官方级时间胶囊思考框 */
+        .thinking-capsule {
+            background: var(--bg3); border: 1px solid var(--border);
+            border-left: 3px solid var(--accent); border-radius: 10px; margin-bottom: 9px;
+            overflow: hidden; transition: all .2s ease;
+        }
+        .thinking-header {
+            padding: 8px 12px; font-size: 12px; font-weight: 650; color: var(--accent);
+            cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+            user-select: none;
+        }
+        .thinking-header:hover { background: rgba(91, 91, 214, 0.05); }
+        .thinking-body {
+            display: none; padding: 0 12px 10px; font-size: 12px; color: var(--text2);
+            line-height: 1.6; border-top: 1px dashed var(--border-soft); padding-top: 8px;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .thinking-capsule.open .thinking-body { display: block; }
+
+        /* 现代代码块设计与原生渲染保障 */
+        .bubble pre {
+            background: #0f172a; color: #f8fafc; padding: 10px 12px; overflow-x: auto;
+            margin: 9px 0; border-radius: 10px; font-size: 12.5px;
+        }
+        .bubble pre code { background: transparent; padding: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .bubble code:not(pre code) {
+            background: var(--bg3); color: var(--accent); padding: 2px 6px; border-radius: 5px;
+            font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .code-block-wrapper {
+            border-radius: 10px; overflow: hidden; margin: 9px 0; border: 1px solid #1e293b;
+            background: #0f172a; position: relative;
+        }
+        .code-block-wrapper pre { margin: 0; border-radius: 0; background: transparent; }
+        .code-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 6px 10px;
+            background: #1e293b; color: #94a3b8; font-size: 11px; font-family: monospace; font-weight: bold;
+        }
+        .code-tabs { display: flex; gap: 4px; align-items: center; }
+        .code-tab {
+            background: rgba(255, 255, 255, .08); color: #94a3b8; border: none; border-radius: 4px;
+            padding: 2px 7px; font-size: 10.5px; cursor: pointer; font-weight: 600; transition: all .15s ease;
+        }
+        .code-tab.active { background: var(--accent); color: #fff; }
+        .code-actions { display: flex; gap: 4px; }
+        .code-btn {
+            background: rgba(255, 255, 255, .14); color: #fff; border: none; border-radius: 4px;
+            padding: 2px 7px; font-size: 10.5px; cursor: pointer; transition: background .15s ease;
+        }
+        .code-btn:hover { background: var(--accent); }
+
+        /* 惰性挂载沙箱容器 */
+        .inline-preview-wrap { width: 100%; height: 340px; background: #ffffff; border-top: 1px solid #1e293b; display: none; }
+        .inline-preview-frame { width: 100%; height: 100%; border: none; background: #fff; }
+
+        /* 长代码羽化折叠 */
+        .code-block-wrapper.is-collapsed pre { max-height: 280px; overflow-y: hidden; }
+        .code-fade-mask {
+            display: none; position: absolute; bottom: 28px; left: 0; right: 0; height: 50px;
+            background: linear-gradient(to bottom, transparent, #0f172a); pointer-events: none;
+        }
+        .code-block-wrapper.is-collapsed .code-fade-mask { display: block; }
+        .code-collapse-bar {
+            display: none; padding: 6px; text-align: center; font-size: 11px; font-weight: 600;
+            background: #1e293b; color: var(--accent); cursor: pointer; user-select: none;
+            border-top: 1px solid #334155;
+        }
+        .code-block-wrapper.has-collapse .code-collapse-bar { display: block; }
+
+        .typing::after { content: "▌"; color: var(--accent); animation: blink .85s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .mermaid-container { background: var(--bg3); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto; text-align: center; }
+
+        #input-area { background: var(--bg2); border-top: 1px solid var(--border); padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
+        #preview-bar { display: none; align-items: center; gap: 8px; background: var(--bg3); padding: 6px 10px; border-radius: 8px; margin-bottom: 8px; }
+        .attachment-strip { display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+        .attachment-item { display: flex; align-items: center; gap: 5px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 11px; }
+        .attachment-item .del-att { cursor: pointer; color: var(--danger); font-weight: bold; margin-left: 4px; }
+
+        .input-row { display: flex; gap: 8px; align-items: flex-end; max-width: 880px; margin: 0 auto; }
+        #text-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; font-size: 14px; resize: none; min-height: 42px; max-height: 140px; }
+        .btn-attach, .btn-send { height: 42px; border-radius: 10px; border: none; cursor: pointer; flex-shrink: 0; }
+        .btn-attach { width: 42px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+        .btn-send { background: var(--accent); color: #fff; font-weight: 650; padding: 0 18px; }
+        .btn-send.stop { background: var(--danger); }
+        .perf-bar { text-align: center; font-size: 10px; color: var(--text3); margin-top: 4px; }
+        .budget-meter { margin-top: 7px; padding: 7px 9px; border-radius: 7px; background: var(--bg3); color: var(--text3); font-size: 10.5px; }
+
+        /* 高级模型抽屉系统 (移动端原生 Bottom Sheet + PC 沉浸弹窗) */
+        .model-picker-backdrop { display: none; position: fixed; inset: 0; z-index: 590; background: rgba(8, 12, 20, .45); backdrop-filter: blur(2.5px); }
+        .model-picker-backdrop.show { display: block; }
+        
+        .model-picker-panel {
+            display: none; position: fixed; z-index: 600; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: min(92vw, 470px); height: min(84vh, 630px); background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;
+        }
+        .model-picker-panel.show { display: flex; flex-direction: column; }
+        .sheet-handle { display: none; }
+        .model-picker-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+        .model-picker-close { border: none; background: transparent; color: var(--text3); font-size: 20px; cursor: pointer; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+        
+        .model-picker-search-bar { padding: 8px 12px 6px; }
+        .model-picker-filters { display: flex; gap: 5px; overflow-x: auto; padding: 0 12px 8px; flex-shrink: 0; }
+        .model-filter { border: 1px solid var(--border); background: var(--bg3); color: var(--text2); border-radius: 999px; padding: 4px 9px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+        .model-filter.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .model-picker-list { overflow-y: auto; flex: 1; padding: 4px 12px 12px; }
+
+        /* 现代微卡片选项 (双层结构) */
+        .model-option {
+            width: 100%; display: flex; flex-direction: column; padding: 10px 12px; border-radius: 10px;
+            background: var(--bg3); border: 1px solid var(--border); cursor: pointer; text-align: left;
+            margin-bottom: 6px; transition: all .14s ease; gap: 4px;
+        }
+        .model-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .model-option.selected { background: var(--accent-soft); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .model-opt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .model-option-name { font-size: 13px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .model-opt-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .model-ctx-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(120, 130, 150, .14); color: var(--text2); font-weight: 600; }
+        .model-check-icon { color: var(--accent); font-weight: 800; font-size: 13px; }
+        .model-opt-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .model-option-id { font-size: 10.5px; color: var(--text3); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .model-tags { display: flex; gap: 4px; flex-shrink: 0; }
+        .model-option-badge { font-size: 9.5px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-weight: 600; }
+        .model-option-badge.badge-reasoning { color: #8b5cf6; border-color: rgba(139, 92, 246, 0.3); background: rgba(139, 92, 246, 0.08); }
+        .model-option-badge.badge-vision { color: #0ea5e9; border-color: rgba(14, 165, 233, 0.3); background: rgba(14, 165, 233, 0.08); }
+        .model-option-badge.badge-fast { color: #10b981; border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.08); }
+
+        .model-picker-custom-bar {
+            padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border);
+            display: flex; gap: 8px; background: var(--bg2); align-items: center;
+        }
+
+        #code-modal, #attach-modal, #skill-modal, #mistake-modal, #mistake-manage-modal, #handoff-modal { display: none; position: fixed; inset: 0; background: rgba(8, 12, 20, .6); z-index: 700; justify-content: center; align-items: center; }
+        .preview-box {
+            background: #fff; width: min(96vw, 980px); height: min(90vh, 850px);
+            border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-lg); transition: all .2s ease;
+        }
+        .preview-box.is-fullscreen { width: 100vw !important; height: 100dvh !important; max-width: none !important; border-radius: 0 !important; }
+        .preview-header { padding: 10px 14px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; }
+        .preview-iframe { flex: 1; border: none; width: 100%; height: 100%; background: #ffffff; }
+        .modal-box { background: var(--bg2); width: 90%; max-width: 380px; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .attach-opt { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 11px; text-align: left; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                width: min(310px, 84vw); position: fixed; left: 0; top: 0; bottom: 0;
+                transform: translateX(-100%); box-shadow: 4px 0 28px rgba(0,0,0,0.22);
+            }
+            #sidebar.open { transform: translateX(0); }
+            #close-side-btn { display: inline-flex !important; }
+            
+            /* 移动端操作按钮常驻与防误触热区 */
+            .msg-actions { opacity: 0.88 !important; margin-top: 6px; gap: 6px; }
+            .action-link { padding: 4px 9px !important; font-size: 11px !important; border-radius: 6px !important; display: inline-flex; align-items: center; min-height: 28px; }
+
+            /* 移动端 Bottom Sheet 抽屉形态 */
+            .model-picker-panel {
+                top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+                transform: translateY(100%) !important; width: 100vw !important; max-width: 100vw !important;
+                height: 78vh !important; max-height: 82vh !important; border-radius: 20px 20px 0 0 !important;
+                border-bottom: none !important; transition: transform .26s cubic-bezier(0.32, 0.72, 0, 1) !important;
+                box-shadow: 0 -8px 32px rgba(0, 0, 0, .28) !important;
+            }
+            .model-picker-panel.show { transform: translateY(0) !important; }
+            .sheet-handle {
+                display: block; width: 44px; height: 4.5px; border-radius: 99px;
+                background: var(--text3); opacity: 0.4; margin: 10px auto 4px; flex-shrink: 0;
+            }
+        }
+        @media (min-width: 769px) {
+            #close-side-btn { display: none !important; }
+            #sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 310px; }
+            #sidebar.collapsed { transform: translateX(-100%); }
+            #main { margin-left: 310px; transition: margin-left .24s ease; }
+            #sidebar.collapsed ~ #main { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="side-overlay" onclick="closeSidebar()"></div>
+    <div class="model-picker-backdrop" id="model-picker-backdrop" onclick="closeModelPicker()"></div>
+
+    <aside id="sidebar">
+        <div class="side-header">
+            <span>⚙️ 平台与模型设置</span>
+            <button class="icon-btn" id="close-side-btn" type="button" onclick="closeSidebar()" title="关闭设置">✕</button>
+        </div>
+        <div class="side-body">
+            <div class="session-block">
+                <div class="session-head">
+                    <label class="field-label" style="margin:0;">会话 (<span id="session-count">0</span>)</label>
+                </div>
+                <div id="session-list"></div>
+                <button type="button" class="btn btn-ghost" style="width:100%;margin-top:6px;font-size:11px;" onclick="newSession()">＋ 新对话</button>
+            </div>
+
+            <!-- 国内精简核心三大平台 -->
+            <div>
+                <label class="field-label">接口服务商 (精简核心)</label>
+                <select id="base-url-select">
+                    <optgroup label="🇨🇳 国内主流开放平台 (核心保留)">
+                        <option value="https://api.deepseek.com" selected>DeepSeek 官方开放平台</option>
+                        <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">阿里云百炼 (通义千问 Qwen 官方)</option>
+                        <option value="https://api.siliconflow.cn/v1">硅基流动 SiliconFlow (国内聚合)</option>
+                    </optgroup>
+                    <optgroup label="🌍 海外顶级官方平台">
+                        <option value="https://api.openai.com/v1">OpenAI 官方平台</option>
+                        <option value="https://openrouter.ai/api/v1">OpenRouter (全球聚合)</option>
+                        <option value="https://api.groq.com/openai/v1">Groq 极速硬件推理</option>
+                        <option value="https://api.x.ai/v1">xAI 开放平台 (Grok 系列)</option>
+                    </optgroup>
+                    <optgroup label="🛠️ 自定义配置">
+                        <option value="custom">自定义 Base URL 端点</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div id="custom-url-wrap" style="display:none;">
+                <label class="field-label">自定义 Base URL (兼容 OpenAI 规范)</label>
+                <input type="text" id="custom-base-url" placeholder="https://api.xxx.com/v1">
+            </div>
+            <div>
+                <label class="field-label">API Key <span id="key-provider-hint" style="color:var(--accent);">(未配置 Key)</span></label>
+                <div style="display:flex;gap:6px;">
+                    <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                    <button class="icon-btn" type="button" onclick="toggleKeyVis()">👁️</button>
+                </div>
+                <div class="hint" id="key-guide-hint">可在厂商控制台创建 API Key 后填入，各厂商 Key 独立本地加密存储。</div>
+            </div>
+
+            <!-- 精简为单张卡片式模型展示器 -->
+            <div>
+                <label class="field-label">当前运行模型</label>
+                <div class="model-card-btn" id="model-picker-btn">
+                    <div class="model-card-info">
+                        <div class="model-card-tag" id="sidebar-provider-tag">DeepSeek 官方</div>
+                        <div class="model-card-name" id="model-picker-current">deepseek-chat</div>
+                        <div class="model-card-sub" id="sidebar-model-sub">单次配额 ~64K · 点击切换</div>
+                    </div>
+                    <div class="model-card-arrow">
+                        <span class="model-arrow-icon">切换 ❯</span>
+                    </div>
+                </div>
+                <div class="budget-meter" id="budget-meter" style="margin-top:6px;">🧠 预算智能适配中…</div>
+            </div>
+
+            <!-- Self-Improving 避坑错题本 -->
+            <div style="border-top:1px solid var(--border-soft);padding-top:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <label class="field-label" style="margin:0;">🧠 避坑错题本 (Self-Improving)</label>
+                    <button type="button" class="btn btn-ghost" style="padding:2px 8px;font-size:10.5px;" onclick="openMistakeManageModal()">📖 管理规则</button>
+                </div>
+                <div class="skill-item" style="background:var(--accent-soft);border-color:var(--accent);">
+                    <div class="skill-info">
+                        <span class="skill-title" style="color:var(--accent);">自动纠错反射引擎</span>
+                        <span class="skill-desc" id="mistake-count-desc">已记录 0 条避坑规则</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="self-improve-toggle" checked onchange="toggleSelfImprove(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 技能插件系统 -->
+            <div style="border-top:1px solid var(--border-soft);padding-top:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <label class="field-label" style="margin:0;">🧩 技能插件 (Skills 增强)</label>
+                    <button type="button" class="btn btn-ghost" style="padding:2px 8px;font-size:10.5px;" onclick="openAddSkillModal()">＋ 安装</button>
+                </div>
+                <div id="skill-list"></div>
+            </div>
+
+            <div>
+                <label class="field-label">深度推理 / 思考模式 (Reasoning)</label>
+                <select id="reasoning-effort-select" onchange="saveSettings()">
+                    <option value="default">默认 (服务端自动)</option>
+                    <option value="none">关闭思考 (速答 / 释放全部 Token 供代码输出)</option>
+                    <option value="high">深度推理 (High / 强化逻辑推导)</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">系统提示词预设</label>
+                <select id="prompt-profile-select" style="margin-bottom:6px;">
+                    <option value="standard">标准通用助手</option>
+                    <option value="balanced">平衡严谨模式</option>
+                    <option value="performance">深度工程/性能模式</option>
+                </select>
+                <textarea id="system-prompt">你是一个高智商、友好且精通各领域的 AI 助手。</textarea>
+            </div>
+            <div>
+                <label class="field-label">最大 Tokens (上下文配额)</label>
+                <input type="number" id="max-tokens" value="65536" min="256" max="393216" step="256">
+                <div class="chip-row">
+                    <button type="button" class="chip token-chip" data-v="4096">4K</button>
+                    <button type="button" class="chip token-chip" data-v="8192">8K</button>
+                    <button type="button" class="chip token-chip" data-v="16384">16K</button>
+                    <button type="button" class="chip token-chip" data-v="32768">32K</button>
+                    <button type="button" class="chip token-chip active" data-v="65536">64K</button>
+                    <button type="button" class="chip token-chip" data-v="131072">128K</button>
+                </div>
+            </div>
+            <div class="row-2">
+                <div>
+                    <label class="field-label">历史保留轮数</label>
+                    <input type="number" id="max-turns" value="12" min="1" max="50">
+                </div>
+                <div>
+                    <label class="field-label">图片保留轮数</label>
+                    <input type="number" id="max-img-turns" value="2" min="0" max="8">
+                </div>
+            </div>
+            <div>
+                <label class="field-label">Temperature <span id="temp-val" style="color:var(--accent);">0.7</span></label>
+                <input type="range" id="temp" min="0" max="1.5" step="0.1" value="0.7">
+            </div>
+            <div>
+                <label class="field-label">界面主题</label>
+                <div class="chip-row">
+                    <button type="button" class="chip theme-chip active" data-t="light">☀️ 浅色</button>
+                    <button type="button" class="chip theme-chip" data-t="dark">🌙 深色</button>
+                </div>
+            </div>
+        </div>
+        <div class="side-footer">
+            <button class="btn btn-ghost" onclick="testConnection()">🧪 测试连通</button>
+            <button class="btn btn-ghost" onclick="exportConfig()">📤 导出配置</button>
+            <button class="btn btn-ghost" onclick="exportMarkdown()">📄 导出 Markdown</button>
+            <button class="btn btn-danger" onclick="clearHistory()">🗑️ 清空当前会话</button>
+        </div>
+    </aside>
+
+    <main id="main">
+        <header id="topbar">
+            <div class="top-left">
+                <button class="icon-btn" id="menu-btn" type="button" onclick="toggleSidebar()" title="会话与设置菜单">☰</button>
+                <span class="status-dot" id="status-dot"></span>
+                <!-- 升级为快捷药丸选择按钮 -->
+                <button type="button" class="model-badge-btn" id="model-badge-pill" onclick="openModelPicker()" title="快捷切换模型">
+                    <span class="model-badge-text" id="model-badge">DeepSeek · deepseek-chat</span>
+                    <span style="font-size:10px;opacity:.65;">▾</span>
+                </button>
+            </div>
+            <div class="top-right">
+                <span id="status-text" style="font-size:11.5px;color:var(--text3);">就绪</span>
+                <button class="icon-btn" id="theme-quick" type="button" title="切换模式">🌓</button>
+            </div>
+        </header>
+
+        <div id="chatbox">
+            <div class="empty-hint" style="margin:auto;text-align:center;color:var(--text3);">
+                <div style="font-size:38px;margin-bottom:8px;">✨</div>
+                <div style="font-size:15px;font-weight:700;color:var(--text2);">FSY AI V14.6 (工件与极速旗舰版)</div>
+                <div class="hint">原地工件双模预览 · 时间胶囊思考框 · 极速流式引擎 · 避坑自省反思</div>
+            </div>
+        </div>
+        <button id="scroll-bottom-btn" type="button" title="滚到底部">↓ 有新输出</button>
+
+        <div id="input-area">
+            <div id="preview-bar">
+                <div class="attachment-strip" id="preview-strip"></div>
+            </div>
+            <div class="input-row">
+                <button class="btn-attach" onclick="openAttachModal()" type="button" title="添加附件">📎</button>
+                <textarea id="text-input" rows="1" enterkeyhint="send" placeholder="输入消息… (支持直接粘贴图片截图, Enter 发送)"></textarea>
+                <button class="btn-send" id="send-btn" onclick="handleSendOrStop()" type="button">发送</button>
+            </div>
+            <div id="perf-bar" class="perf-bar">就绪</div>
+        </div>
+    </main>
+
+    <!-- 高级模型选择抽屉 (移动端 Bottom Sheet / PC 居中沉浸) -->
+    <div class="model-picker-panel" id="model-picker-panel">
+        <div class="sheet-handle"></div>
+        <div class="model-picker-head">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <strong>选择模型</strong>
+                <span id="model-status" style="font-size:10px;color:var(--text3);">就绪</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" id="refresh-models-btn" onclick="fetchModels({force:true})" title="在线刷新可用模型">↻ 刷新</button>
+                <button type="button" class="model-picker-close" id="model-picker-close" onclick="closeModelPicker()">×</button>
+            </div>
+        </div>
+        <div class="model-picker-search-bar">
+            <input id="model-picker-search" class="model-picker-search" type="search" placeholder="搜索模型名称或 ID…">
+        </div>
+        <div class="model-picker-filters" id="model-picker-filters">
+            <button type="button" class="model-filter active" data-filter="all">全部</button>
+            <button type="button" class="model-filter" data-filter="chat">💬 对话</button>
+            <button type="button" class="model-filter" data-filter="vision">👁️ 识图</button>
+            <button type="button" class="model-filter" data-filter="reasoning">🧠 深度思考</button>
+        </div>
+        <div class="model-picker-list" id="model-picker-list"></div>
+        <div class="model-picker-custom-bar">
+            <input type="text" id="model-manual" placeholder="输入自定义模型 ID (如 gpt-4.5) 并按 Enter">
+            <button type="button" class="btn btn-primary" onclick="applyManualModel()" style="padding:6px 12px;font-size:11.5px;flex-shrink:0;">应用</button>
+        </div>
+    </div>
+
+    <!-- 增强版沙箱代码预览弹窗 (全屏模式) -->
+    <div id="code-modal" onclick="if(event.target===this)closePreviewModal()">
+        <div class="preview-box" id="preview-box-modal">
+            <div class="preview-header">
+                <span>🎨 交互式沙箱预览 (物理隔离)</span>
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <button class="icon-btn" style="color:#fff;font-size:14px;width:32px;height:32px;" onclick="reloadPreview()" title="重新加载预览">🔄</button>
+                    <button class="icon-btn" style="color:#fff;font-size:14px;width:32px;height:32px;" onclick="togglePreviewFullscreen()" title="切换全屏/窗口">⛶</button>
+                    <button class="icon-btn" style="color:#fff;font-size:14px;width:32px;height:32px;" onclick="openPreviewInNewTab()" title="在新标签页打开预览">↗️</button>
+                    <button class="icon-btn" style="color:#fff;font-size:18px;width:32px;height:32px;" onclick="closePreviewModal()" title="关闭">✕</button>
+                </div>
+            </div>
+            <iframe id="preview-frame" class="preview-iframe" sandbox="allow-scripts allow-modals"></iframe>
+        </div>
+    </div>
+
+    <div id="attach-modal" onclick="if(event.target===this)closeAttachModal()">
+        <div class="modal-box">
+            <div style="font-weight:bold;margin-bottom:4px;">📎 导入附件</div>
+            <button class="attach-opt" onclick="triggerFile('image/*')">🖼️ 上传本地图片 (自动压缩)</button>
+            <button class="attach-opt" onclick="triggerFile('.txt,.md,.py,.js,.json,.html,.css,.csv,.jsx,.tsx,.ts,.sql')">📄 上传代码 / 文本</button>
+        </div>
+    </div>
+
+    <div id="skill-modal" onclick="if(event.target===this)closeAddSkillModal()">
+        <div class="modal-box">
+            <div style="font-weight:bold;margin-bottom:4px;">🧩 安装新技能插件 (Skill)</div>
+            <input type="text" id="custom-skill-name" placeholder="技能名称 (例如: 论文润色)">
+            <textarea id="custom-skill-prompt" placeholder="技能系统提示引导词..." style="min-height:90px;"></textarea>
+            <button class="btn btn-primary" onclick="saveCustomSkill()" type="button" style="margin-top:6px;">安装技能</button>
+        </div>
+    </div>
+
+    <!-- 错题录入弹窗 -->
+    <div id="mistake-modal" onclick="if(event.target===this)closeMistakeRecordModal()">
+        <div class="modal-box">
+            <div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
+                <span>📝 录入避坑错题本</span>
+                <span style="cursor:pointer;color:var(--text3);padding:4px;" onclick="closeMistakeRecordModal()">✕</span>
+            </div>
+            <div class="hint" style="margin-top:-2px;">指出 AI 的错误与后续改进规范，AI 将在后续对话中主动规避。</div>
+            <div style="margin-top:4px;">
+                <label class="field-label">AI 错在哪里？（错误现象）</label>
+                <input type="text" id="mistake-input-flaw" placeholder="例如: 算错了复利数字 / 逻辑自相矛盾">
+            </div>
+            <div>
+                <label class="field-label">以后遇到同类问题必须怎么做？（纠正准则）</label>
+                <textarea id="mistake-input-rule" placeholder="例如: 涉及此类计算必须列出公式逐步演算，不要跳步。" style="min-height:75px;"></textarea>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <button class="btn btn-ghost" style="flex:1;" onclick="submitMistake(false)" type="button">💾 仅存入错题本</button>
+                <button class="btn btn-primary" style="flex:1.2;" onclick="submitMistake(true)" type="button">🚀 保存并重新回答</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 错题管理抽屉 -->
+    <div id="mistake-manage-modal" onclick="if(event.target===this)closeMistakeManageModal()">
+        <div class="modal-box" style="max-width:440px;max-height:85vh;">
+            <div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
+                <span>📖 错题避坑库管理</span>
+                <span style="cursor:pointer;color:var(--text3);padding:4px;" onclick="closeMistakeManageModal()">✕</span>
+            </div>
+            <div id="mistake-list" style="max-height:360px;margin-top:6px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <button class="btn btn-danger" style="padding:6px 12px;font-size:11px;" onclick="clearAllMistakes()">清空错题</button>
+                <button class="btn btn-primary" style="padding:6px 16px;font-size:12px;" onclick="closeMistakeManageModal()">完成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handoff 交接抽屉 -->
+    <div id="handoff-modal" onclick="if(event.target===this)closeHandoffModal()">
+        <div class="modal-box" style="max-width:420px;">
+            <div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
+                <span>🔀 跨模型任务交接 (Agent Handoff)</span>
+                <span style="cursor:pointer;color:var(--text3);padding:4px;" onclick="closeHandoffModal()">✕</span>
+            </div>
+            <div class="hint" style="margin-top:-2px;">将思考推演提炼为交接档案，换用代码模型接力执行。</div>
+            <div style="margin-top:4px;">
+                <label class="field-label">接力模型 (Target Agent)</label>
+                <select id="handoff-target-model"></select>
+            </div>
+            <div>
+                <label class="field-label">交接目标 (Next Action)</label>
+                <select id="handoff-goal-select" onchange="onHandoffGoalChange(this.value)">
+                    <option value="code">💻 编写完整交付代码 (由高速代码模型接手)</option>
+                    <option value="refactor">🏗️ 架构重构与性能优化</option>
+                    <option value="test">🧪 编写测试用例与边界验证</option>
+                    <option value="custom">✏️ 自定义下一步任务…</option>
+                </select>
+                <input type="text" id="handoff-custom-goal" placeholder="输入自定义交付要求" style="display:none;margin-top:5px;">
+            </div>
+            <div>
+                <label class="field-label">交接上下文摘要</label>
+                <textarea id="handoff-brief" style="min-height:90px;font-size:11.5px;"></textarea>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <button class="btn btn-ghost" style="flex:1;" onclick="closeHandoffModal()" type="button">取消</button>
+                <button class="btn btn-primary" style="flex:1.5;" onclick="executeHandoff()" type="button">🚀 启动交接并生成</button>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="file-input" style="display:none;" multiple onchange="onFilePicked(event)">
+
+<script>
+"use strict";
+
+/* ==================== 厂商与模型预设 (纯净原生 JS 逻辑，无转义符) ==================== */
+const MODEL_PRESETS = {
+    "https://api.deepseek.com": [
+        { id: "deepseek-chat", label: "deepseek-chat (DeepSeek-V3 官方旗舰)" },
+        { id: "deepseek-reasoner", label: "deepseek-reasoner (DeepSeek-R1 深度推理)" }
+    ],
+    "https://dashscope.aliyuncs.com/compatible-mode/v1": [
+        { id: "qwen-max", label: "qwen-max (通义千问超强旗舰)" },
+        { id: "qwen-plus", label: "qwen-plus (通义千问均衡主力)" },
+        { id: "qwen-turbo", label: "qwen-turbo (通义千问极速轻量)" },
+        { id: "qwen-vl-max", label: "qwen-vl-max (通义千问视觉旗舰)" }
+    ],
+    "https://api.siliconflow.cn/v1": [
+        { id: "deepseek-ai/DeepSeek-V3", label: "DeepSeek-V3 (硅基流动托管)" },
+        { id: "deepseek-ai/DeepSeek-R1", label: "DeepSeek-R1 (硅基推理托管)" },
+        { id: "Qwen/Qwen2.5-72B-Instruct", label: "Qwen2.5-72B (千问开源最强)" },
+        { id: "Qwen/Qwen2.5-VL-72B-Instruct", label: "Qwen2.5-VL-72B (千问视觉识图)" }
+    ],
+    "https://api.openai.com/v1": [
+        { id: "gpt-4o", label: "gpt-4o (多模态旗舰)" },
+        { id: "gpt-4o-mini", label: "gpt-4o-mini (极速高性价比)" },
+        { id: "o1", label: "o1 (OpenAI 顶级推理)" },
+        { id: "o3-mini", label: "o3-mini (新一代高效推理)" }
+    ],
+    "https://openrouter.ai/api/v1": [
+        { id: "anthropic/claude-3.5-sonnet", label: "claude-3.5-sonnet (代码最强)" },
+        { id: "deepseek/deepseek-r1", label: "deepseek-r1" },
+        { id: "google/gemini-2.5-pro-exp:free", label: "gemini-2.5-pro" }
+    ],
+    "https://api.groq.com/openai/v1": [
+        { id: "llama-3.3-70b-versatile", label: "llama-3.3-70b (LPU 硬件极速推理)" }
+    ],
+    "https://api.x.ai/v1": [
+        { id: "grok-3", label: "grok-3 (马斯克 xAI 旗舰模型)" }
+    ],
+    "custom": [
+        { id: "deepseek-chat", label: "deepseek-chat" },
+        { id: "deepseek-reasoner", label: "deepseek-reasoner" }
+    ]
+};
+
+const DEFAULT_KEYS = {
+    "https://api.deepseek.com": "",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1": "",
+    "https://api.siliconflow.cn/v1": ""
+};
+
+const PROMPT_PRESETS = {
+    standard: "你是一个高智商、友好且精通各领域的 AI 助手。",
+    balanced: "你是兼顾准确性、完整性与执行效率的高性能 AI 助手。任务明确时直接交付高质量结果，不确定时主动说明。",
+    performance: "你是顶级系统与逻辑推理 AI。先分析约束与深层逻辑，自检潜在漏洞，直接交付清晰可靠的最终成果。"
+};
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function esc(s) {
+    return String(s !== null && s !== undefined ? s : "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escMultiline(s) {
+    return esc(s).replace(/\n/g, "<br>");
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    }
+    return fallbackCopy(text);
+}
+
+function fallbackCopy(text) {
+    return new Promise((resolve, reject) => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            const ok = document.execCommand("copy");
+            document.body.removeChild(ta);
+            if (ok) resolve();
+            else reject(new Error("Copy failed"));
+        } catch (err) {
+            document.body.removeChild(ta);
+            reject(err);
+        }
+    });
+}
+
+function downloadCodeAsFile(code, lang) {
+    const extMap = {
+        "HTML": "html", "SVG": "svg", "XML": "xml", "JAVASCRIPT": "js", "JS": "js",
+        "TYPESCRIPT": "ts", "TS": "ts", "PYTHON": "py", "PY": "py", "CSS": "css",
+        "JSON": "json", "SQL": "sql", "MARKDOWN": "md", "MD": "md", "BASH": "sh", "SH": "sh"
+    };
+    const ext = extMap[String(lang).toUpperCase()] || "txt";
+    const filename = "code_" + Date.now() + "." + ext;
+    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ==================== 侧边栏开启/关闭逻辑 (单一左侧主控，边缘滑动保护) ==================== */
+function openSidebar() {
+    const sb = $("sidebar");
+    const ov = $("side-overlay");
+    if (!sb || !ov) return;
+    if (window.innerWidth <= 768) {
+        sb.classList.add("open");
+        ov.classList.add("show");
+    } else {
+        sb.classList.remove("collapsed");
+    }
+}
+
+function closeSidebar() {
+    const sb = $("sidebar");
+    const ov = $("side-overlay");
+    if (!sb || !ov) return;
+    if (window.innerWidth <= 768) {
+        sb.classList.remove("open");
+        ov.classList.remove("show");
+    } else {
+        sb.classList.add("collapsed");
+    }
+}
+
+function toggleSidebar() {
+    const sb = $("sidebar");
+    if (!sb) return;
+    if (window.innerWidth <= 768) {
+        if (sb.classList.contains("open")) closeSidebar();
+        else openSidebar();
+    } else {
+        sb.classList.toggle("collapsed");
+    }
+}
+
+(() => {
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    const SWIPE_DISTANCE = 45;
+
+    document.addEventListener("touchstart", e => {
+        if (e.touches.length !== 1) return;
+        if (e.target.closest("pre, code, table, .model-picker-panel, .modal-box, #text-input, iframe")) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+    }, { passive: true });
+
+    document.addEventListener("touchend", e => {
+        if (e.changedTouches.length !== 1) return;
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        const elapsed = Date.now() - touchStartTime;
+
+        if (elapsed < 350 && Math.abs(deltaX) > SWIPE_DISTANCE && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+            const isSidebarOpen = $("sidebar").classList.contains("open");
+            // 严格限定仅在屏幕左侧边缘 24px 以内右滑，方才展开侧栏，防止与横向滚动冲突
+            if (!isSidebarOpen && touchStartX <= 24 && deltaX > 0) openSidebar();
+            else if (isSidebarOpen && deltaX < 0) closeSidebar();
+        }
+    }, { passive: true });
+})();
+
+/* ==================== Handoff 跨模型任务交接 ==================== */
+let currentHandoffIdx = -1;
+function openHandoffModal(idx) {
+    currentHandoffIdx = idx;
+    const msg = history[idx];
+    if (!msg) return;
+
+    const selectEl = $("handoff-target-model");
+    selectEl.innerHTML = "";
+    const activeBase = $("base-url-select").value;
+    const fallbackList = MODEL_PRESETS[activeBase] ? MODEL_PRESETS[activeBase] : MODEL_PRESETS.custom;
+    const list = (modelCatalog && modelCatalog.length > 0) ? modelCatalog : fallbackList;
+    const curModel = getSelectedModel();
+
+    list.forEach(m => {
+        const id = m.id ? m.id : m.value;
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = m.label ? m.label : id;
+        if (id !== curModel && !selectEl.value) opt.selected = true;
+        selectEl.appendChild(opt);
+    });
+
+    const reasoningSnippet = msg.reasoning_content ? ("【前序思考结论】\n" + msg.reasoning_content.slice(0, 400) + "...\n\n") : "";
+    const contentSnippet = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+    $("handoff-brief").value = reasoningSnippet + "【前序产出要点】\n" + contentSnippet.slice(0, 600);
+    $("handoff-goal-select").value = "code";
+    $("handoff-custom-goal").style.display = "none";
+    $("handoff-modal").style.display = "flex";
+}
+
+function closeHandoffModal() {
+    $("handoff-modal").style.display = "none";
+    currentHandoffIdx = -1;
+}
+
+function onHandoffGoalChange(val) {
+    $("handoff-custom-goal").style.display = val === "custom" ? "block" : "none";
+}
+
+function executeHandoff() {
+    const targetModel = $("handoff-target-model").value;
+    const goalSelect = $("handoff-goal-select").value;
+    const customGoal = $("handoff-custom-goal").value.trim();
+    const brief = $("handoff-brief").value.trim();
+
+    let goalText = "按照前述结论，直接编写可落地的完整代码，无需重新推演。";
+    if (goalSelect === "refactor") goalText = "对上述代码/方案依据最佳架构实践规范进行重构优化。";
+    else if (goalSelect === "test") goalText = "为上述逻辑设计全套单元测试与极端边界场景验证。";
+    else if (goalSelect === "custom" && customGoal) goalText = customGoal;
+
+    closeHandoffModal();
+    $("model-picker-current").textContent = targetModel;
+    updateModelBadge();
+    saveSettings();
+
+    const handoffPrompt = "【🔀 任务交接档案 (Handoff Artifact)】\n前序推理 Agent 已完成推演，现将任务交接给你：\n\n" + brief + "\n\n👉 【本次接力目标】：" + goalText + "\n请直接紧接着以上结论开始执行，无需重新推导前提，直接交付成果！";
+    $("text-input").value = handoffPrompt;
+    sendMsg();
+}
+
+/* ==================== Self-Improving 避坑错题本 ==================== */
+let mistakeBook = [];
+let selfImproveEnabled = true;
+let currentCorrectingIdx = -1;
+
+function loadMistakeBook() {
+    try {
+        mistakeBook = JSON.parse(localStorage.getItem("v11_mistake_book") || "[]");
+        selfImproveEnabled = localStorage.getItem("v11_self_improve_enabled") !== "false";
+    } catch (_) {
+        mistakeBook = [];
+    }
+    const toggle = $("self-improve-toggle");
+    if (toggle) toggle.checked = selfImproveEnabled;
+    updateMistakeUI();
+}
+
+function saveMistakeBook() {
+    localStorage.setItem("v11_mistake_book", JSON.stringify(mistakeBook));
+    localStorage.setItem("v11_self_improve_enabled", selfImproveEnabled ? "true" : "false");
+    updateMistakeUI();
+}
+
+function updateMistakeUI() {
+    const desc = $("mistake-count-desc");
+    if (desc) desc.textContent = "已沉淀 " + mistakeBook.length + " 条经验规则 (" + mistakeBook.filter(m => m.enabled).length + " 条生效)";
+}
+
+function toggleSelfImprove(val) {
+    selfImproveEnabled = val;
+    saveMistakeBook();
+}
+
+function openMistakeRecordModal(idx) {
+    currentCorrectingIdx = idx;
+    $("mistake-input-flaw").value = "";
+    $("mistake-input-rule").value = "";
+    $("mistake-modal").style.display = "flex";
+}
+
+function closeMistakeRecordModal() {
+    $("mistake-modal").style.display = "none";
+    currentCorrectingIdx = -1;
+}
+
+function submitMistake(retryNow = false) {
+    const flaw = $("mistake-input-flaw").value.trim();
+    const rule = $("mistake-input-rule").value.trim();
+    if (!flaw || !rule) return alert("请同时填写 AI 的错误点以及后续改正准则！");
+
+    mistakeBook.unshift({ id: "m_" + Date.now(), flaw, rule, enabled: true, createdAt: new Date().toLocaleDateString() });
+    saveMistakeBook();
+    const targetIdx = currentCorrectingIdx;
+    closeMistakeRecordModal();
+
+    if (retryNow && targetIdx >= 0) {
+        history = history.slice(0, targetIdx);
+        saveHistory();
+        redrawChatbox();
+        sendMsg({ reuse: true });
+    } else {
+        alert("✅ 纠错规则已录入错题本！AI 在以后的回复中将严格遵守。");
+    }
+}
+
+function openMistakeManageModal() {
+    const listEl = $("mistake-list");
+    listEl.innerHTML = "";
+    if (!mistakeBook.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text3);font-size:12px;">错题本还是空的，遇到 AI 翻车时点击回答下方的「📝 纠错」即可录入。</div>';
+    } else {
+        mistakeBook.forEach((m, idx) => {
+            const item = document.createElement("div");
+            item.className = "skill-item";
+            item.style.marginBottom = "5px";
+            item.innerHTML = `
+                <div class="skill-info" style="gap:2px;">
+                    <span class="skill-title" style="color:var(--danger);font-size:11px;">⚠️ 曾犯错误: ${esc(m.flaw)}</span>
+                    <span class="skill-desc" style="color:var(--text);font-size:11px;font-weight:600;">✅ 避坑准则: ${esc(m.rule)}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${m.enabled ? 'checked' : ''} onchange="toggleSingleMistake(${idx}, this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span style="cursor:pointer;color:var(--danger);font-size:16px;padding:0 3px;" onclick="deleteSingleMistake(${idx})">×</span>
+                </div>`;
+            listEl.appendChild(item);
+        });
+    }
+    $("mistake-manage-modal").style.display = "flex";
+}
+
+function closeMistakeManageModal() {
+    $("mistake-manage-modal").style.display = "none";
+}
+
+function toggleSingleMistake(idx, val) {
+    if (mistakeBook[idx]) {
+        mistakeBook[idx].enabled = val;
+        saveMistakeBook();
+    }
+}
+
+function deleteSingleMistake(idx) {
+    mistakeBook.splice(idx, 1);
+    saveMistakeBook();
+    openMistakeManageModal();
+}
+
+function clearAllMistakes() {
+    if (!confirm("确定要清空错题本中的所有自省规则吗？")) return;
+    mistakeBook = [];
+    saveMistakeBook();
+    openMistakeManageModal();
+}
+
+function getSelfImprovingContext() {
+    if (!selfImproveEnabled) return "";
+    const activeRules = mistakeBook.filter(m => m.enabled);
+    if (!activeRules.length) return "";
+    const listStr = activeRules.map((m, i) => `${i + 1}. 【避坑警示】${m.flaw} ➔ 【必须遵守的纠正准则】${m.rule}`).join("\n");
+    return `\n\n=== 🧠 自省避坑错题本 (Self-Improving Memory) ===\n这是你在之前的回答中犯过的真实错误与纠正准则。请在回答前自检并严格规避：\n${listStr}\n===============================================`;
+}
+
+/* ==================== 技能插件系统 (Skills 增强) ==================== */
+const BuiltinSkills = [
+    {
+        id: "chart_visualizer",
+        name: "📊 可视化与沙箱运行增强",
+        desc: "规范输出 HTML/SVG 代码，确保可一键沙箱运行与流程图展示",
+        enabled: true,
+        execute: () => `【Skill: 沙箱预览与可视化规范】
+1. 涉及网页、UI、SVG矢量图、2D动画、交互效果，务必使用单个独立完整、可直接在浏览器运行的 HTML/SVG 代码输出。
+2. 代码必须完整闭合，包含完整样式和脚本，严格使用 \`\`\`html 或 \`\`\`svg 包裹，以便用户直接在原地一键切换沙箱预览运行。
+3. 涉及架构流程图、时序图，直接使用 \`\`\`mermaid 代码块输出。`
+    },
+    {
+        id: "improve_codebase_architecture",
+        name: "🏗️ 代码库架构深度审查",
+        desc: "理清模块边界、循环依赖、状态提升与重构定位",
+        enabled: true,
+        execute: () => `【Skill: 代码库架构深度审查】
+1. 分离 Presentation、Business 与 Data Access 层，杜绝反向调用与隐式循环依赖。
+2. 排查 Prop Drilling 与全局 Context 滥用。明确指出问题处于哪一层并提供重构目录。`
+    },
+    {
+        id: "datetime_clock",
+        name: "🕒 实时时钟插件",
+        desc: "感知当前准确系统时间与星期，消除时间幻觉",
+        enabled: true,
+        execute: () => {
+            const d = new Date();
+            const days = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+            return `【Skill: 实时系统时间】当前准确时间为：${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')} (${days[d.getDay()]})，时区：${Intl.DateTimeFormat().resolvedOptions().timeZone}。`;
+        }
+    },
+    {
+        id: "math_solver",
+        name: "🧮 严谨数学与逻辑运算",
+        desc: "消除复杂代数、复利与大数算术幻觉",
+        enabled: true,
+        execute: () => `【Skill: 严谨数学运算规范】如涉及数值计算、高阶公式或财务演算，必须列出算式逐步自检推算，确保最终数字绝对无误。`
+    },
+    {
+        id: "edge_case_tester",
+        name: "🧪 极端边界与单元测试设计",
+        desc: "空边界、并发竞争、异常熔断与 Mock 矩阵",
+        enabled: true,
+        execute: () => `【Skill: 极端边界测试】设计代码时，必须同时考虑 3 个易忽略的极端边界场景（空状态、网络超时、竞态条件），并给出测试方案。`
+    }
+];
+
+let customSkills = [];
+function loadSkills() {
+    try { customSkills = JSON.parse(localStorage.getItem("v11_custom_skills") || "[]"); } catch (_) { customSkills = []; }
+    try {
+        const builtinState = JSON.parse(localStorage.getItem("v11_builtin_skills_state") || "{}");
+        BuiltinSkills.forEach(s => {
+            if (typeof builtinState[s.id] === "boolean") s.enabled = builtinState[s.id];
+        });
+    } catch (_) {}
+    renderSkillUI();
+}
+
+function renderSkillUI() {
+    const list = $("skill-list");
+    list.innerHTML = "";
+
+    BuiltinSkills.forEach(s => {
+        const el = document.createElement("div");
+        el.className = "skill-item";
+        el.innerHTML = `
+            <div class="skill-info">
+                <span class="skill-title">${esc(s.name)}</span>
+                <span class="skill-desc">${esc(s.desc)}</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleBuiltinSkill('${s.id}', this.checked)">
+                <span class="toggle-slider"></span>
+            </label>`;
+        list.appendChild(el);
+    });
+
+    customSkills.forEach((s, idx) => {
+        const el = document.createElement("div");
+        el.className = "skill-item";
+        el.innerHTML = `
+            <div class="skill-info">
+                <span class="skill-title">🧩 ${esc(s.name)}</span>
+                <span class="skill-desc">${esc(s.prompt)}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                <label class="toggle-switch">
+                    <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleCustomSkill(${idx}, this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="cursor:pointer;color:var(--danger);font-size:14px;padding:0 2px;" onclick="deleteCustomSkill(${idx})">×</span>
+            </div>`;
+        list.appendChild(el);
+    });
+}
+
+function toggleBuiltinSkill(id, val) {
+    const it = BuiltinSkills.find(x => x.id === id);
+    if (it) it.enabled = val;
+    const state = {};
+    BuiltinSkills.forEach(s => state[s.id] = s.enabled);
+    localStorage.setItem("v11_builtin_skills_state", JSON.stringify(state));
+}
+
+function toggleCustomSkill(idx, val) {
+    if (customSkills[idx]) {
+        customSkills[idx].enabled = val;
+        localStorage.setItem("v11_custom_skills", JSON.stringify(customSkills));
+    }
+}
+
+function deleteCustomSkill(idx) {
+    customSkills.splice(idx, 1);
+    localStorage.setItem("v11_custom_skills", JSON.stringify(customSkills));
+    renderSkillUI();
+}
+
+function openAddSkillModal() { $("skill-modal").style.display = "flex"; }
+function closeAddSkillModal() { $("skill-modal").style.display = "none"; }
+
+function saveCustomSkill() {
+    const name = $("custom-skill-name").value.trim();
+    const prompt = $("custom-skill-prompt").value.trim();
+    if (!name || !prompt) return alert("请填写技能名称和引导提示词");
+    customSkills.push({ name, prompt, enabled: true });
+    localStorage.setItem("v11_custom_skills", JSON.stringify(customSkills));
+    $("custom-skill-name").value = ""; $("custom-skill-prompt").value = "";
+    closeAddSkillModal();
+    renderSkillUI();
+}
+
+function getActiveSkillsContext() {
+    const injected = [];
+    BuiltinSkills.filter(s => s.enabled).forEach(s => injected.push(s.execute()));
+    customSkills.filter(s => s.enabled).forEach(s => injected.push("【自定义Skill: " + s.name + "】" + s.prompt));
+    const baseSkills = injected.length ? ("\n\n=== 正在生效的 Skill 插件增强 ===\n" + injected.join("\n\n")) : "";
+    return baseSkills + getSelfImprovingContext();
+}
+
+function getActiveSkillBadges() {
+    const badges = [];
+    if (selfImproveEnabled && mistakeBook.some(m => m.enabled)) badges.push("🧠 错题自省");
+    BuiltinSkills.filter(s => s.enabled).forEach(s => {
+        if (s.id === "chart_visualizer") badges.push("📊 沙箱可视化");
+        else if (s.id === "improve_codebase_architecture") badges.push("🏗️ 架构审查");
+        else if (s.id === "datetime_clock") badges.push("🕒 实时时钟");
+        else if (s.id === "math_solver") badges.push("🧮 算术自检");
+        else if (s.id === "edge_case_tester") badges.push("🧪 极端测试");
+    });
+    customSkills.filter(s => s.enabled).forEach(s => badges.push("🧩 " + s.name));
+    return badges;
+}
+
+/* ==================== 极速流畅 Markdown / KaTeX / 代码块渲染引擎 ==================== */
+if (window.marked) {
+    try {
+        marked.use({ breaks: true, gfm: true });
+    } catch (_) {
+        marked.setOptions({ breaks: true, gfm: true });
+    }
+}
+
+function fmt(text, isFinal = false) {
+    const str = String(text !== null && text !== undefined ? text : "");
+    if (!str) return "";
+
+    const codeTokens = [];
+    let maskedStr = str.replace(/(```[\s\S]*?```|`[^`\n]+`)/g, match => {
+        const token = "@@CODE_SHIELD_" + codeTokens.length + "@@";
+        codeTokens.push({ token, match });
+        return token;
+    });
+
+    const mathTokens = [];
+    // 性能优化：仅在最终完成时才做耗时的 KaTeX 正则抽取与全量渲染，流式期间保持 60FPS
+    const hasPotentialMath = isFinal && (maskedStr.indexOf("$") !== -1);
+
+    if (hasPotentialMath) {
+        maskedStr = maskedStr.replace(/\$\$([\s\S]*?)\$\$/g, (_, content) => {
+            const token = "@@MATH_BLOCK_" + mathTokens.length + "@@";
+            mathTokens.push({ token, content: content.trim(), display: true });
+            return "\n\n" + token + "\n\n";
+        }).replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (_, prefix, content) => {
+            const token = "@@MATH_INLINE_" + mathTokens.length + "@@";
+            mathTokens.push({ token, content: content.trim(), display: false });
+            return prefix + token;
+        });
+    }
+
+    for (let i = 0; i < codeTokens.length; i++) {
+        maskedStr = maskedStr.replace(codeTokens[i].token, () => codeTokens[i].match);
+    }
+
+    let html = "";
+    try {
+        const parsed = marked.parse(maskedStr);
+        html = (isFinal && window.DOMPurify) ? DOMPurify.sanitize(parsed) : parsed;
+    } catch (_) {
+        html = escMultiline(maskedStr);
+    }
+
+    if (isFinal && window.katex && mathTokens.length) {
+        for (let i = 0; i < mathTokens.length; i++) {
+            const item = mathTokens[i];
+            let mathHtml = "";
+            try {
+                mathHtml = katex.renderToString(item.content, { displayMode: item.display, throwOnError: false });
+            } catch (_) {
+                mathHtml = item.display ? ("$$" + esc(item.content) + "$$") : ("$" + esc(item.content) + "$");
+            }
+            html = html.replace(item.token, () => mathHtml);
+        }
+    }
+    return html;
+}
+
+function buildSvgWrapper(code) {
+    if (/^\s*<svg/i.test(code) && !/<html/i.test(code)) {
+        return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1120;}svg{max-width:95vw;max-height:95vh;height:auto;}</style></head><body>${code}</body></html>`;
+    }
+    return code;
+}
+
+/* 语法高亮、Mermaid 图表、原地双模 Tab、折叠、复制、下载与沙箱按需挂载 */
+function postProcessBubble(container) {
+    container.querySelectorAll("pre code").forEach(block => {
+        if (!block.dataset.highlighted && window.hljs) {
+            if (!block.classList.contains("language-mermaid")) {
+                hljs.highlightElement(block);
+                block.dataset.highlighted = "true";
+            }
+        }
+    });
+
+    if (window.mermaid) {
+        container.querySelectorAll("pre code.language-mermaid").forEach(codeBlock => {
+            const pre = codeBlock.parentElement;
+            if (pre && !pre.dataset.mermaidRendered) {
+                pre.dataset.mermaidRendered = "true";
+                const chartDiv = document.createElement("div");
+                chartDiv.className = "mermaid-container";
+                chartDiv.textContent = codeBlock.innerText;
+                pre.style.display = "none";
+                pre.parentNode.insertBefore(chartDiv, pre);
+                try {
+                    mermaid.run({ nodes: [chartDiv] }).catch(() => {
+                        chartDiv.remove();
+                        pre.style.display = "block";
+                    });
+                } catch (_) {
+                    chartDiv.remove();
+                    pre.style.display = "block";
+                }
+            }
+        });
+    }
+
+    container.querySelectorAll("pre").forEach(pre => {
+        if (pre.parentElement.classList.contains("code-block-wrapper")) return;
+        if (pre.style.display === "none") return;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block-wrapper";
+
+        const codeEl = pre.querySelector("code");
+        const codeText = codeEl ? codeEl.innerText : pre.innerText;
+
+        let lang = "CODE";
+        if (codeEl) {
+            const m = codeEl.className.match(/language-([a-zA-Z0-9_\-]+)/);
+            if (m) lang = m[1].toUpperCase();
+        }
+
+        const linesCount = codeText.split("\n").length;
+        const isPreviewable = /^(HTML|SVG|XML)$/i.test(lang) || /<!doctype|<html|<svg|<div|<body|<head|<script/i.test(codeText);
+
+        const header = document.createElement("div");
+        header.className = "code-header";
+
+        let tabsHtml = `<span>${esc(lang)} (${linesCount} 行)</span>`;
+        if (isPreviewable) {
+            tabsHtml = `<div class="code-tabs">
+                <button class="code-tab tab-code active" type="button">💻 代码</button>
+                <button class="code-tab tab-preview" type="button">▶ 原地预览</button>
+            </div>`;
+        }
+
+        header.innerHTML = `${tabsHtml}<div class="code-actions"></div>`;
+        const actions = header.querySelector(".code-actions");
+
+        if (isPreviewable) {
+            const p = document.createElement("button");
+            p.className = "code-btn";
+            p.type = "button";
+            p.textContent = "⛶ 全屏";
+            p.title = "打开全屏预览窗口";
+            p.onclick = () => openPreviewModal(codeText);
+            actions.appendChild(p);
+        }
+
+        const d = document.createElement("button");
+        d.className = "code-btn";
+        d.type = "button";
+        d.textContent = "💾 导出";
+        d.title = "下载为本地独立文件";
+        d.onclick = () => downloadCodeAsFile(codeText, lang);
+        actions.appendChild(d);
+
+        const c = document.createElement("button");
+        c.className = "code-btn";
+        c.type = "button";
+        c.textContent = "复制";
+        c.onclick = () => {
+            copyTextToClipboard(codeText).then(() => {
+                c.textContent = "已复制";
+                setTimeout(() => c.textContent = "复制", 1500);
+            }).catch(() => {
+                c.textContent = "复制失败";
+                setTimeout(() => c.textContent = "复制", 1500);
+            });
+        };
+        actions.appendChild(c);
+
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(header);
+        wrapper.appendChild(pre);
+
+        // 惰性挂载：未点击预览前不实例化 iframe，节省大量内存储备
+        if (isPreviewable) {
+            const inlineWrap = document.createElement("div");
+            inlineWrap.className = "inline-preview-wrap";
+            wrapper.appendChild(inlineWrap);
+
+            const tabCode = header.querySelector(".tab-code");
+            const tabPrev = header.querySelector(".tab-preview");
+
+            tabCode.onclick = () => {
+                tabCode.classList.add("active");
+                tabPrev.classList.remove("active");
+                pre.style.display = "block";
+                inlineWrap.style.display = "none";
+                const activeIframe = inlineWrap.querySelector(".inline-preview-frame");
+                if (activeIframe) {
+                    activeIframe.srcdoc = "";
+                    activeIframe.remove();
+                }
+                if (wrapper.classList.contains("has-collapse")) {
+                    wrapper.querySelector(".code-fade-mask").style.display = wrapper.classList.contains("is-collapsed") ? "block" : "none";
+                    wrapper.querySelector(".code-collapse-bar").style.display = "block";
+                }
+            };
+
+            tabPrev.onclick = () => {
+                tabPrev.classList.add("active");
+                tabCode.classList.remove("active");
+                pre.style.display = "none";
+                inlineWrap.style.display = "block";
+
+                let iframe = inlineWrap.querySelector(".inline-preview-frame");
+                if (!iframe) {
+                    iframe = document.createElement("iframe");
+                    iframe.className = "inline-preview-frame";
+                    iframe.sandbox = "allow-scripts allow-modals";
+                    inlineWrap.appendChild(iframe);
+                }
+                iframe.srcdoc = buildSvgWrapper(codeText);
+
+                if (wrapper.classList.contains("has-collapse")) {
+                    wrapper.querySelector(".code-fade-mask").style.display = "none";
+                    wrapper.querySelector(".code-collapse-bar").style.display = "none";
+                }
+            };
+        }
+
+        if (linesCount > 35) {
+            wrapper.classList.add("has-collapse", "is-collapsed");
+
+            const fadeMask = document.createElement("div");
+            fadeMask.className = "code-fade-mask";
+            wrapper.appendChild(fadeMask);
+
+            const collapseBar = document.createElement("div");
+            collapseBar.className = "code-collapse-bar";
+            collapseBar.textContent = `↕️ 展开全部代码 (共 ${linesCount} 行)`;
+            collapseBar.onclick = () => {
+                const isCollapsed = wrapper.classList.toggle("is-collapsed");
+                collapseBar.textContent = isCollapsed ? `↕️ 展开全部代码 (共 ${linesCount} 行)` : "⬆️ 收起代码";
+            };
+            wrapper.appendChild(collapseBar);
+        }
+    });
+}
+
+/* ==================== 运行时状态与模型适配 ==================== */
+let history = [];
+let sessions = [];
+let currentSessionId = null;
+let currentAttachments = [];
+let modelCatalog = [];
+let activeModelFilter = "all";
+let filterSearchKeyword = "";
+let themeMode = "light";
+let abortCtrl = null;
+let userScrolledUp = false;
+
+function getModelMaxCompletionLimit(model, providerBase) {
+    const isOfficialDeepSeek = /api\.deepseek\.com/i.test(providerBase);
+    const m = String(model || "").toLowerCase();
+    const isReasoning = /reasoner|r1|thinking|pro/i.test(m);
+
+    if (isOfficialDeepSeek) {
+        if (/chat/i.test(m) && !isReasoning) return 8192;
+        return 65536;
+    }
+    if (isReasoning) return 65536;
+    if (/qwen.*(72b|32b|14b|7b)/i.test(m)) return 8192;
+    if (/gpt-4o-mini/i.test(m)) return 16384;
+    if (/gpt-4o/i.test(m)) return 4096;
+    if (/o1|o3/i.test(m)) return 65536;
+    return 16384;
+}
+
+function safeTokens() {
+    const v = parseInt($("max-tokens").value, 10);
+    if (isNaN(v) || v <= 0) return 65536;
+    return Math.min(Math.max(v, 256), 393216);
+}
+
+function getClampedTokensForRequest(model) {
+    const userRequested = safeTokens();
+    const providerBase = $("base-url-select").value === "custom" ? $("custom-base-url").value : $("base-url-select").value;
+    const modelLimit = getModelMaxCompletionLimit(model, providerBase);
+    return Math.min(userRequested, modelLimit);
+}
+
+function getSelectedModel() {
+    return $("model-picker-current")?.textContent?.trim() || "deepseek-chat";
+}
+
+function getEndpoint() {
+    const raw = $("base-url-select").value === "custom" ? $("custom-base-url").value.trim() : $("base-url-select").value;
+    return raw.replace(/\/+$/, "") + "/chat/completions";
+}
+
+/* ==================== 模型列表筛选与抽屉分页渲染 ==================== */
+let pickerFilteredItems = [];
+let pickerRenderIndex = 0;
+const PICKER_BATCH_SIZE = 35;
+
+function filterModelList() {
+    const currentBase = $("base-url-select").value;
+    const list = (modelCatalog && modelCatalog.length > 0) ? modelCatalog : (MODEL_PRESETS[currentBase] ? MODEL_PRESETS[currentBase] : MODEL_PRESETS.custom);
+    const search = filterSearchKeyword.trim().toLowerCase();
+    pickerFilteredItems = list.filter(it => {
+        const id = String(it.id ? it.id : (it.value ? it.value : ""));
+        const label = String(it.label ? it.label : (it.name ? it.name : id));
+        if (search && id.toLowerCase().indexOf(search) === -1 && label.toLowerCase().indexOf(search) === -1) return false;
+
+        const isVision = /vision|vl|4v|omni/i.test(id);
+        const isReasoning = /reasoner|r1|o1|o3|thinking/i.test(id);
+
+        if (activeModelFilter === "vision" && !isVision) return false;
+        if (activeModelFilter === "reasoning" && !isReasoning) return false;
+        return true;
+    });
+}
+
+function appendNextPickerBatch() {
+    const listEl = $("model-picker-list");
+    if (pickerRenderIndex >= pickerFilteredItems.length) return;
+
+    const frag = document.createDocumentFragment();
+    const currentModel = getSelectedModel();
+    const nextLimit = Math.min(pickerRenderIndex + PICKER_BATCH_SIZE, pickerFilteredItems.length);
+
+    for (let i = pickerRenderIndex; i < nextLimit; i++) {
+        const it = pickerFilteredItems[i];
+        const id = String(it.id ? it.id : (it.value ? it.value : ""));
+        const label = String(it.label ? it.label : (it.name ? it.name : id));
+        const isReasoning = /reasoner|r1|o1|o3|thinking/i.test(id);
+        const isVision = /vision|vl|4v|omni/i.test(id);
+        const isFast = /turbo|mini|flash|groq|8b|7b/i.test(id);
+
+        let contextBadge = "64K";
+        if (/200k|sonnet|gemini/i.test(id)) contextBadge = "200K";
+        else if (/128k|v3|r1|qwen2\.5/i.test(id)) contextBadge = "128K";
+        else if (/mini|turbo/i.test(id)) contextBadge = "128K";
+
+        const isSelected = (id === currentModel);
+        const card = document.createElement("div");
+        card.className = "model-option" + (isSelected ? " selected" : "");
+        card.onclick = () => {
+            $("model-picker-current").textContent = id;
+            closeModelPicker();
+            updateModelBadge();
+            saveSettings();
+        };
+
+        card.innerHTML = `
+            <div class="model-opt-top">
+                <span class="model-option-name">${esc(label)}</span>
+                <div class="model-opt-meta">
+                    <span class="model-ctx-badge">${contextBadge}</span>
+                    ${isSelected ? '<span class="model-check-icon">✓</span>' : ''}
+                </div>
+            </div>
+            <div class="model-opt-bottom">
+                <span class="model-option-id">${esc(id)}</span>
+                <div class="model-tags">
+                    ${isReasoning ? '<span class="model-option-badge badge-reasoning">🧠 深度思考</span>' : ''}
+                    ${isVision ? '<span class="model-option-badge badge-vision">👁️ 视觉识图</span>' : ''}
+                    ${isFast ? '<span class="model-option-badge badge-fast">⚡ 极速推理</span>' : ''}
+                </div>
+            </div>`;
+        frag.appendChild(card);
+    }
+    pickerRenderIndex = nextLimit;
+    listEl.appendChild(frag);
+}
+
+function resetAndRenderModelPicker() {
+    filterModelList();
+    const listEl = $("model-picker-list");
+    listEl.innerHTML = "";
+    pickerRenderIndex = 0;
+    if (!pickerFilteredItems.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:28px;color:var(--text3);font-size:12px;">未匹配到相关模型</div>';
+        return;
+    }
+    appendNextPickerBatch();
+}
+
+function openModelPicker() {
+    activeModelFilter = "all";
+    filterSearchKeyword = "";
+    $("model-picker-search").value = "";
+    document.querySelectorAll(".model-filter").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+    $("model-picker-panel").classList.add("show");
+    $("model-picker-backdrop").classList.add("show");
+    resetAndRenderModelPicker();
+}
+
+function closeModelPicker() {
+    $("model-picker-panel").classList.remove("show");
+    $("model-picker-backdrop").classList.remove("show");
+}
+
+function applyManualModel() {
+    const val = $("model-manual").value.trim();
+    if (!val) return alert("请输入有效的模型 ID");
+    $("model-picker-current").textContent = val;
+    $("model-manual").value = "";
+    closeModelPicker();
+    updateModelBadge();
+    saveSettings();
+}
+
+/* ==================== 会话与本地持久化 ==================== */
+function ensureSessions() {
+    try { sessions = JSON.parse(localStorage.getItem("v11_sessions") || "[]"); } catch (_) { sessions = []; }
+    currentSessionId = localStorage.getItem("v11_current");
+    if (!sessions.length) {
+        const id = "s_" + Date.now();
+        sessions = [{ id, title: "新对话", updatedAt: Date.now() }];
+        currentSessionId = id;
+    }
+    if (!currentSessionId || !sessions.some(s => s.id === currentSessionId)) currentSessionId = sessions[0].id;
+    try { history = JSON.parse(localStorage.getItem("v11_msg_" + currentSessionId) || "[]"); } catch (_) { history = []; }
+}
+
+function saveHistory() {
+    if (!currentSessionId) return;
+    try {
+        localStorage.setItem("v11_msg_" + currentSessionId, JSON.stringify(history));
+        localStorage.setItem("v11_sessions", JSON.stringify(sessions));
+        localStorage.setItem("v11_current", currentSessionId);
+    } catch (e) {
+        console.warn("存储配额告警，压缩历史图片中...", e);
+        try {
+            history.forEach(m => {
+                if (Array.isArray(m.content)) {
+                    m.content = m.content.map(p => p.type === "image_url" ? { type: "text", text: "[图片已自动归档]" } : p);
+                }
+            });
+            localStorage.setItem("v11_msg_" + currentSessionId, JSON.stringify(history));
+        } catch (_) {}
+    }
+}
+
+function renderSessionList() {
+    const list = $("session-list");
+    list.innerHTML = "";
+    $("session-count").textContent = String(sessions.length);
+    sessions.forEach(s => {
+        const el = document.createElement("div");
+        el.className = "session-item" + (s.id === currentSessionId ? " active" : "");
+        el.innerHTML = `<span class="s-title">${esc(s.title || "新对话")}</span><button class="s-del" type="button">×</button>`;
+        el.onclick = e => {
+            if (e.target.classList.contains("s-del")) deleteSession(s.id);
+            else switchSession(s.id);
+        };
+        list.appendChild(el);
+    });
+}
+
+function newSession() {
+    if (abortCtrl) return alert("请先等待当前生成完毕或点击停止");
+    const id = "s_" + Date.now();
+    sessions.unshift({ id, title: "新对话", updatedAt: Date.now() });
+    currentSessionId = id;
+    history = [];
+    saveHistory();
+    renderSessionList();
+    redrawChatbox();
+}
+
+function switchSession(id) {
+    if (id === currentSessionId || abortCtrl) return;
+    currentSessionId = id;
+    try { history = JSON.parse(localStorage.getItem("v11_msg_" + currentSessionId) || "[]"); } catch (_) { history = []; }
+    saveHistory();
+    renderSessionList();
+    redrawChatbox();
+}
+
+function deleteSession(id) {
+    if (sessions.length <= 1) return alert("请保留至少一个会话");
+    sessions = sessions.filter(s => s.id !== id);
+    localStorage.removeItem("v11_msg_" + id);
+    if (currentSessionId === id) {
+        currentSessionId = sessions[0].id;
+        try { history = JSON.parse(localStorage.getItem("v11_msg_" + currentSessionId) || "[]"); } catch (_) { history = []; }
+    }
+    saveHistory();
+    renderSessionList();
+    redrawChatbox();
+}
+
+/* ==================== 界面消息列表渲染 ==================== */
+let renderedFromIndex = 0;
+
+function redrawChatbox() {
+    const box = $("chatbox");
+    box.innerHTML = "";
+    if (!history.length) {
+        box.innerHTML = `<div class="empty-hint" style="margin:auto;text-align:center;color:var(--text3);">
+            <div style="font-size:38px;margin-bottom:8px;">✨</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text2);">FSY AI V14.6 (工件与极速旗舰版)</div>
+            <div class="hint">原地工件双模预览 · 时间胶囊思考框 · 极速流式引擎 · 避坑自省反思</div>
+        </div>`;
+        return;
+    }
+    renderedFromIndex = Math.max(0, history.length - 35);
+    if (renderedFromIndex > 0) renderLoadMoreButton(box);
+
+    for (let i = renderedFromIndex; i < history.length; i++) {
+        box.appendChild(buildMsgRow(history[i], i));
+    }
+    scrollChatToBottom(true);
+}
+
+function renderLoadMoreButton(box) {
+    const existing = box.querySelector(".load-more-msgs");
+    if (existing) existing.remove();
+
+    const bar = document.createElement("button");
+    bar.type = "button";
+    bar.className = "load-more-msgs";
+    bar.textContent = `⬆️ 载入更早的 ${renderedFromIndex} 条历史`;
+    bar.onclick = () => {
+        const target = Math.max(0, renderedFromIndex - 35);
+        const frag = document.createDocumentFragment();
+        for (let i = target; i < renderedFromIndex; i++) {
+            frag.appendChild(buildMsgRow(history[i], i));
+        }
+        const prevScrollHeight = box.scrollHeight;
+        box.insertBefore(frag, bar.nextSibling);
+        renderedFromIndex = target;
+        if (renderedFromIndex <= 0) bar.remove();
+        else bar.textContent = `⬆️ 载入更早的 ${renderedFromIndex} 条历史`;
+        box.scrollTop += (box.scrollHeight - prevScrollHeight);
+    };
+    box.prepend(bar);
+}
+
+function buildMsgRow(m, idx) {
+    const row = document.createElement("div");
+    row.className = "msg-row " + (m.role === "user" ? "user" : "bot");
+    row.dataset.idx = String(idx);
+    const av = m.role === "user" ? "我" : "AI";
+    const isTruncated = m.finish_reason === "length";
+
+    let badgesHtml = "";
+    if (m.role === "assistant" && Array.isArray(m.activeBadges) && m.activeBadges.length) {
+        badgesHtml = `<div class="bubble-badges">${m.activeBadges.map(b => `<span class="bubble-badge">${esc(b)}</span>`).join("")}</div>`;
+    }
+
+    row.innerHTML = `<div class="avatar">${av}</div>
+        <div class="bubble-wrap">
+            ${badgesHtml}
+            <div class="bubble"></div>
+            <div class="msg-actions">
+                <span class="action-link copy-b">📋 复制</span>
+                ${m.role === "assistant" ? `
+                    <span class="action-link retry-b">🔄 重试</span>
+                    <span class="action-link mistake-b" style="color:var(--warn);font-weight:600;">📝 纠错</span>
+                    <span class="action-link handoff-b" style="color:var(--accent);font-weight:600;">🔀 交接 (Handoff)</span>
+                ` : ''}
+                ${isTruncated && m.role === "assistant" ? '<span class="action-link continue-b" style="color:var(--accent);font-weight:700;">▶️ 继续续写</span>' : ''}
+            </div>
+        </div>`;
+    const bubble = row.querySelector(".bubble");
+    if (m.role === "user") {
+        let contentHtml = "";
+        if (Array.isArray(m.content)) {
+            m.content.forEach(p => {
+                if (p.type === "image_url") contentHtml += `<img src="${esc(p.image_url.url)}" class="msg-img">`;
+                if (p.type === "text") contentHtml += `<div>${escMultiline(p.text)}</div>`;
+            });
+        } else {
+            contentHtml = escMultiline(m.content);
+        }
+        bubble.innerHTML = contentHtml;
+    } else {
+        if (m.reasoning_content) {
+            const cap = document.createElement("div");
+            cap.className = "thinking-capsule";
+            cap.innerHTML = `<div class="thinking-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>✓ 深度思考完成 (${m.reasoning_content.length} 字)</span>
+                <span style="font-size:10px;opacity:.7;">点击展开/折叠</span>
+            </div>
+            <div class="thinking-body">${esc(m.reasoning_content)}</div>`;
+            bubble.appendChild(cap);
+        }
+        const textDiv = document.createElement("div");
+        textDiv.innerHTML = fmt(m.content, true);
+        bubble.appendChild(textDiv);
+        postProcessBubble(bubble);
+    }
+    bindRowActions(row);
+    return row;
+}
+
+function bindRowActions(row) {
+    const copy = row.querySelector(".copy-b");
+    const retry = row.querySelector(".retry-b");
+    const mistake = row.querySelector(".mistake-b");
+    const handoff = row.querySelector(".handoff-b");
+    const cont = row.querySelector(".continue-b");
+    if (copy) {
+        copy.onclick = () => {
+            const idx = Number(row.dataset.idx);
+            if (!isNaN(idx) && history[idx]) {
+                const text = typeof history[idx].content === "string" ? history[idx].content : JSON.stringify(history[idx].content);
+                copyTextToClipboard(text).then(() => setStatus("已复制全文本"));
+            }
+        };
+    }
+    if (retry) {
+        retry.onclick = () => {
+            const idx = Number(row.dataset.idx);
+            if (!isNaN(idx)) {
+                history = history.slice(0, idx);
+                saveHistory();
+                redrawChatbox();
+                sendMsg({ reuse: true });
+            }
+        };
+    }
+    if (mistake) {
+        mistake.onclick = () => {
+            const idx = Number(row.dataset.idx);
+            if (!isNaN(idx)) openMistakeRecordModal(idx);
+        };
+    }
+    if (handoff) {
+        handoff.onclick = () => {
+            const idx = Number(row.dataset.idx);
+            if (!isNaN(idx)) openHandoffModal(idx);
+        };
+    }
+    if (cont) {
+        cont.onclick = () => sendMsg({ continueLast: true });
+    }
+}
+
+/* ==================== 90ms 黄金帧率调度与流式引擎 ==================== */
+function handleSendOrStop() {
+    if (abortCtrl) {
+        abortCtrl.abort();
+        abortCtrl = null;
+        $("send-btn").textContent = "发送";
+        $("send-btn").classList.remove("stop");
+        return;
+    }
+    sendMsg();
+}
+
+async function sendMsg(opts = {}) {
+    const key = $("api-key").value.trim();
+    if (!key) return alert("请先填写当前厂商的 API Key");
+
+    const input = $("text-input");
+    let text = input.value.trim();
+    if (opts.continueLast) {
+        text = "请紧接着上一条被截断处往下续写，不要重复已生成的部分，直接输出后续内容：";
+    }
+
+    if (!opts.reuse && !text && !currentAttachments.length) return;
+
+    if (!opts.reuse && !opts.continueLast) {
+        const curSession = sessions.find(s => s.id === currentSessionId);
+        if (curSession && (curSession.title === "新对话" || !curSession.title) && text) {
+            const cleanTitle = text.slice(0, 15).replace(/[\r\n\t]/g, " ").trim();
+            if (cleanTitle) {
+                curSession.title = cleanTitle + (text.length > 15 ? "…" : "");
+                renderSessionList();
+                saveHistory();
+            }
+        }
+    }
+
+    const model = getSelectedModel();
+    const isReasoner = /reasoner|r1/i.test(model);
+    const box = $("chatbox");
+    box.querySelector(".empty-hint")?.remove();
+
+    if (currentAttachments.some(a => a.type === "image") && /deepseek-chat|deepseek-reasoner/i.test(model)) {
+        if (!confirm("选中的官方 DeepSeek 模型暂不支持直接识图，是否移除图片仅发送文字？")) {
+            return;
+        }
+        currentAttachments = currentAttachments.filter(a => a.type !== "image");
+    }
+
+    if (!opts.reuse) {
+        let userContent = text;
+        if (currentAttachments.length) {
+            userContent = [];
+            if (text) userContent.push({ type: "text", text });
+            currentAttachments.forEach(att => {
+                if (att.type === "image") userContent.push({ type: "image_url", image_url: { url: att.data } });
+                else userContent.push({ type: "text", text: `\n[文件 ${att.name}]:\n\`\`\`\n${att.data}\n\`\`\`\n` });
+            });
+        }
+        history.push({ role: "user", content: userContent });
+        saveHistory();
+        box.appendChild(buildMsgRow(history[history.length - 1], history.length - 1));
+        input.value = "";
+        input.style.height = "42px";
+        clearAttachment();
+    }
+
+    const maxTurns = parseInt($("max-turns").value, 10) || 12;
+    let context = history.slice(-maxTurns * 2);
+    while (context.length && context[0].role === "assistant") context.shift();
+
+    const maxImgTurns = parseInt($("max-img-turns").value, 10);
+    const imgTurnsLimit = isNaN(maxImgTurns) ? 2 : maxImgTurns;
+    let userMsgCount = 0;
+    for (let i = context.length - 1; i >= 0; i--) {
+        if (context[i].role === "user") {
+            userMsgCount++;
+            if (userMsgCount > imgTurnsLimit) {
+                if (Array.isArray(context[i].content)) {
+                    context[i] = {
+                        ...context[i],
+                        content: context[i].content.map(p => p.type === "image_url" ? { type: "text", text: "[历史图片已归档]" } : p)
+                    };
+                }
+            }
+        }
+    }
+
+    const skillsContext = getActiveSkillsContext();
+    const activeBadges = getActiveSkillBadges();
+    const fullSystemPrompt = $("system-prompt").value.trim() + skillsContext;
+    const payload = [{ role: "system", content: fullSystemPrompt }, ...context];
+
+    const bRow = document.createElement("div");
+    bRow.className = "msg-row bot";
+
+    let badgesHtml = "";
+    if (activeBadges.length) {
+        badgesHtml = `<div class="bubble-badges">${activeBadges.map(b => `<span class="bubble-badge">${esc(b)}</span>`).join("")}</div>`;
+    }
+
+    // 采用流光波浪呼吸条替代生硬文字
+    bRow.innerHTML = `<div class="avatar">AI</div>
+        <div class="bubble-wrap">
+            ${badgesHtml}
+            <div class="bubble typing">
+                <div class="r-slot"></div>
+                <div class="c-slot">
+                    <div class="typing-loading-wrap">
+                        <div class="shimmer-wave"></div>
+                        <div class="typing-tip-text">AI 正在深度思考并组织回复…</div>
+                    </div>
+                </div>
+            </div>
+            <div class="msg-actions">
+                <span class="action-link copy-b">📋 复制</span>
+                <span class="action-link retry-b">🔄 重试</span>
+                <span class="action-link mistake-b" style="color:var(--warn);font-weight:600;">📝 纠错</span>
+                <span class="action-link handoff-b" style="color:var(--accent);font-weight:600;">🔀 交接 (Handoff)</span>
+            </div>
+        </div>`;
+    box.appendChild(bRow);
+    userScrolledUp = false;
+    scrollChatToBottom(true);
+
+    const bubble = bRow.querySelector(".bubble");
+    const rSlot = bRow.querySelector(".r-slot");
+    const cSlot = bRow.querySelector(".c-slot");
+
+    $("send-btn").textContent = "停止";
+    $("send-btn").classList.add("stop");
+    setStatus("生成中…", "busy");
+
+    abortCtrl = new AbortController();
+    let reply = "", reasoning = "";
+    let finishReason = null;
+    const startTime = performance.now();
+
+    let renderTimer = null;
+    let lastRenderTime = 0;
+
+    const scheduleThrottleRender = (force = false) => {
+        const now = performance.now();
+        if (!force && now - lastRenderTime < 90) {
+            if (!renderTimer) {
+                renderTimer = requestAnimationFrame(() => {
+                    renderTimer = null;
+                    scheduleThrottleRender(false);
+                });
+            }
+            return;
+        }
+        lastRenderTime = now;
+        if (renderTimer) {
+            cancelAnimationFrame(renderTimer);
+            renderTimer = null;
+        }
+
+        if (reasoning) {
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+            let cap = rSlot.querySelector(".thinking-capsule");
+            if (!cap) {
+                rSlot.innerHTML = `<div class="thinking-capsule open">
+                    <div class="thinking-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span class="th-title">🧠 正在深度思考 (${elapsed}s)...</span>
+                        <span style="font-size:10px;opacity:.7;">点击折叠</span>
+                    </div>
+                    <div class="thinking-body"></div>
+                </div>`;
+            } else {
+                const titleEl = cap.querySelector(".th-title");
+                if (titleEl) titleEl.textContent = `🧠 正在深度思考 (${elapsed}s)...`;
+            }
+            const bodyEl = rSlot.querySelector(".thinking-body");
+            if (bodyEl) bodyEl.textContent = reasoning;
+        }
+        if (reply) {
+            cSlot.innerHTML = fmt(reply, false);
+        }
+        if (!userScrolledUp) {
+            scrollChatToBottom(false);
+        }
+    };
+
+    try {
+        const bodyObj = {
+            model,
+            messages: payload,
+            stream: true,
+            max_tokens: getClampedTokensForRequest(model)
+        };
+
+        if (/o1|o3/i.test(model)) {
+            bodyObj.max_completion_tokens = bodyObj.max_tokens;
+            delete bodyObj.max_tokens;
+        }
+
+        if (!isReasoner && !/o1|o3/i.test(model)) {
+            bodyObj.temperature = parseFloat($("temp").value) || 0.7;
+        }
+
+        const effort = $("reasoning-effort-select").value;
+        if (effort !== "default") {
+            if (/o1|o3/i.test(model)) {
+                bodyObj.reasoning_effort = effort === "none" ? "low" : effort;
+            } else if (effort === "none" && /siliconflow/i.test(getEndpoint())) {
+                bodyObj.enable_thinking = false;
+            }
+        }
+
+        const res = await fetch(getEndpoint(), {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+            body: JSON.stringify(bodyObj),
+            signal: abortCtrl.signal
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+                if (buffer.trim()) {
+                    for (const line of buffer.split("\n")) {
+                        const l = line.trim();
+                        if (l.startsWith("data:") && l.slice(5).trim() !== "[DONE]") {
+                            try {
+                                const parsed = JSON.parse(l.slice(5).trim());
+                                const delta = parsed.choices?.[0]?.delta || {};
+                                if (delta.reasoning_content) reasoning += delta.reasoning_content;
+                                if (delta.content) reply += delta.content;
+                            } catch (_) {}
+                        }
+                    }
+                }
+                break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            let sep;
+            while ((sep = buffer.search(/\r?\n\r?\n/)) !== -1) {
+                const block = buffer.slice(0, sep);
+                const match = buffer.slice(sep).match(/^\r?\n\r?\n/);
+                buffer = buffer.slice(sep + match[0].length);
+
+                for (const line of block.split("\n")) {
+                    const l = line.trim();
+                    if (!l.startsWith("data:")) continue;
+                    const json = l.slice(5).trim();
+                    if (json === "[DONE]") continue;
+                    try {
+                        const parsed = JSON.parse(json);
+                        if (parsed.error) throw new Error(parsed.error.message || "服务返回错误");
+                        const choice = parsed.choices?.[0] || {};
+                        if (choice.finish_reason) finishReason = choice.finish_reason;
+                        const delta = choice.delta || {};
+                        if (delta.reasoning_content) reasoning += delta.reasoning_content;
+                        if (delta.content) reply += delta.content;
+                        scheduleThrottleRender(false);
+                    } catch (e) {
+                        if (e.message && e.message.includes("服务返回错误")) throw e;
+                    }
+                }
+            }
+        }
+
+        if (renderTimer) {
+            cancelAnimationFrame(renderTimer);
+            renderTimer = null;
+        }
+
+        if (reasoning) {
+            const totalSec = ((performance.now() - startTime) / 1000).toFixed(1);
+            rSlot.innerHTML = `<div class="thinking-capsule">
+                <div class="thinking-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span>✓ 深度思考完成 (共 ${totalSec}s · ${reasoning.length} 字)</span>
+                    <span style="font-size:10px;opacity:.7;">点击展开/折叠</span>
+                </div>
+                <div class="thinking-body">${esc(reasoning)}</div>
+            </div>`;
+        }
+
+        if (reply) {
+            let note = "";
+            if (finishReason === "length") {
+                note = `<div style="color:var(--warn);font-size:12px;margin-top:8px;padding:6px 10px;background:rgba(217,119,6,0.1);border-radius:6px;">⚠️ 单次生成达到 Token 上限截断。可点击下方「▶️ 继续续写」或「🔀 交接」。</div>`;
+            }
+            cSlot.innerHTML = fmt(reply, true) + note;
+            postProcessBubble(cSlot);
+
+            if (finishReason === "length") {
+                const actions = bRow.querySelector(".msg-actions");
+                if (actions && !actions.querySelector(".continue-b")) {
+                    const contSpan = document.createElement("span");
+                    contSpan.className = "action-link continue-b";
+                    contSpan.style.cssText = "color:var(--accent);font-weight:700;";
+                    contSpan.textContent = "▶️ 继续续写";
+                    contSpan.onclick = () => sendMsg({ continueLast: true });
+                    actions.appendChild(contSpan);
+                }
+            }
+        } else {
+            if (finishReason === "length") {
+                cSlot.innerHTML = `<div style="color:var(--danger);font-size:12px;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;line-height:1.6;">
+                    <strong>⚠️ 单次输出 Token 预算耗尽</strong><br>思考推理过程消耗完了单次 Token 上限。<br>
+                    <span style="font-size:11px;color:var(--text2);">💡 解决方案：点击下方 <b>「🔀 交接 (Handoff)」</b>，自动带入思考结论由代码模型接手。</span>
+                </div>`;
+            } else {
+                cSlot.innerHTML = `<div style="color:var(--warn);font-size:12px;">⚠️ 模型未返回正文内容，请点击重试。</div>`;
+            }
+        }
+        bubble.classList.remove("typing");
+
+        const botIdx = history.push({
+            role: "assistant",
+            content: reply,
+            reasoning_content: reasoning || undefined,
+            finish_reason: finishReason,
+            activeBadges: activeBadges
+        }) - 1;
+        bRow.dataset.idx = String(botIdx);
+        bindRowActions(bRow);
+        saveHistory();
+
+        const durationSec = (performance.now() - startTime) / 1000;
+        const duration = durationSec.toFixed(1);
+        const speed = durationSec > 0 ? (reply.length / durationSec).toFixed(1) : "0";
+        const estimatedTokens = Math.round(reply.length * 0.8 + (reasoning ? reasoning.length * 0.8 : 0));
+        $("perf-bar").textContent = `完成 · 耗时 ${duration}s · 输出 ${reply.length} 字 (${speed} 字/s) · 预估 Tokens ~${estimatedTokens}`;
+        setStatus("就绪");
+
+    } catch (e) {
+        if (renderTimer) cancelAnimationFrame(renderTimer);
+        bubble.classList.remove("typing");
+        if (e.name === "AbortError") {
+            if (!reply && !reasoning) bRow.remove();
+            else {
+                cSlot.innerHTML += `<div style="color:var(--danger);font-size:11px;margin-top:6px;">⏹️ 已停止生成</div>`;
+                const botIdx = history.push({ role: "assistant", content: reply, reasoning_content: reasoning, activeBadges: activeBadges }) - 1;
+                bRow.dataset.idx = String(botIdx);
+                bindRowActions(bRow);
+                saveHistory();
+            }
+            setStatus("已停止");
+        } else {
+            cSlot.innerHTML = `<span style="color:var(--danger)">⚠️ 错误: ${esc(e.message)}</span>`;
+            setStatus("错误", "err");
+        }
+    } finally {
+        abortCtrl = null;
+        $("send-btn").textContent = "发送";
+        $("send-btn").classList.remove("stop");
+        if (!userScrolledUp) scrollChatToBottom(false);
+    }
+}
+
+/* ==================== 在线同步模型列表 ==================== */
+async function fetchModels(opts = {}) {
+    const key = $("api-key").value.trim();
+    if (!key) return setModelStatus("请先填写 API Key", "err");
+    const rawBase = $("base-url-select").value === "custom" ? $("custom-base-url").value.trim() : $("base-url-select").value;
+    const modelsUrl = rawBase.replace(/\/+$/, "") + "/models";
+
+    setModelStatus("获取中…");
+    try {
+        const res = await fetch(modelsUrl, { headers: { "Authorization": "Bearer " + key } });
+        if (!res.ok) throw new Error("获取失败: HTTP " + res.status);
+        const data = await res.json();
+        const rawList = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+
+        modelCatalog = rawList.map(it => {
+            const id = typeof it === "string" ? it : it.id;
+            return { id, label: it.name && it.name !== id ? `${it.name} (${id})` : id };
+        });
+
+        setModelStatus(`已同步 ${modelCatalog.length} 个`, "ok");
+        resetAndRenderModelPicker();
+    } catch (e) {
+        setModelStatus("同步失败", "err");
+    }
+}
+
+/* ==================== 界面初始化与事件绑定 ==================== */
+window.onload = () => {
+    themeMode = localStorage.getItem("v11_theme") || "light";
+    applyTheme();
+    if (window.mermaid) {
+        mermaid.initialize({ startOnLoad: false, theme: themeMode === 'dark' ? 'dark' : 'neutral' });
+    }
+    loadSettings();
+    loadSkills();
+    loadMistakeBook();
+    ensureSessions();
+    renderSessionList();
+    redrawChatbox();
+    bindEvents();
+    updateModelBadge();
+};
+
+function loadSettings() {
+    let base = localStorage.getItem("v11_base") || "https://api.deepseek.com";
+    const validBases = ["https://api.deepseek.com", "https://dashscope.aliyuncs.com/compatible-mode/v1", "https://api.siliconflow.cn/v1", "https://api.openai.com/v1", "https://openrouter.ai/api/v1", "https://api.groq.com/openai/v1", "https://api.x.ai/v1", "custom"];
+    if (validBases.indexOf(base) === -1) {
+        base = "https://api.deepseek.com";
+    }
+    $("base-url-select").value = base;
+    $("custom-url-wrap").style.display = base === "custom" ? "block" : "none";
+    $("custom-base-url").value = localStorage.getItem("v11_custom") || "";
+    $("api-key").value = localStorage.getItem("v11_key_" + base) || DEFAULT_KEYS[base] || "";
+    $("max-tokens").value = localStorage.getItem("v11_tokens") || "65536";
+    $("model-picker-current").textContent = localStorage.getItem("v11_model") || "deepseek-chat";
+    $("system-prompt").value = localStorage.getItem("v11_sys") || PROMPT_PRESETS.standard;
+    $("reasoning-effort-select").value = localStorage.getItem("v11_reasoning_effort") || "default";
+    $("max-img-turns").value = localStorage.getItem("v11_max_img_turns") || "2";
+    $("temp").value = localStorage.getItem("v11_temp") || "0.7";
+    $("temp-val").textContent = $("temp").value;
+    updateKeyHint();
+}
+
+function saveSettings() {
+    const base = $("base-url-select").value;
+    localStorage.setItem("v11_base", base);
+    localStorage.setItem("v11_custom", $("custom-base-url").value.trim());
+    localStorage.setItem("v11_key_" + base, $("api-key").value.trim());
+    localStorage.setItem("v11_model", getSelectedModel());
+    localStorage.setItem("v11_tokens", $("max-tokens").value);
+    localStorage.setItem("v11_sys", $("system-prompt").value);
+    localStorage.setItem("v11_reasoning_effort", $("reasoning-effort-select").value);
+    localStorage.setItem("v11_max_img_turns", $("max-img-turns").value);
+    localStorage.setItem("v11_temp", $("temp").value);
+}
+
+function updateKeyHint() {
+    const has = !!$("api-key").value.trim();
+    $("key-provider-hint").textContent = has ? "(已配置 Key)" : "(未配置 Key)";
+}
+
+function bindEvents() {
+    $("side-overlay").addEventListener("touchend", e => { e.preventDefault(); closeSidebar(); }, { passive: false });
+
+    $("base-url-select").onchange = e => {
+        const val = e.target.value;
+        $("custom-url-wrap").style.display = val === "custom" ? "block" : "none";
+        $("api-key").value = localStorage.getItem("v11_key_" + val) || DEFAULT_KEYS[val] || "";
+        const presets = MODEL_PRESETS[val] ? MODEL_PRESETS[val] : MODEL_PRESETS.custom;
+        $("model-picker-current").textContent = presets[0]?.id || "deepseek-chat";
+        modelCatalog = [];
+        updateKeyHint();
+        saveSettings();
+        updateModelBadge();
+    };
+
+    $("api-key").oninput = () => { saveSettings(); updateKeyHint(); };
+    $("model-picker-btn").onclick = openModelPicker;
+
+    $("model-picker-list").addEventListener("scroll", () => {
+        const el = $("model-picker-list");
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) appendNextPickerBatch();
+    });
+
+    document.querySelectorAll(".model-filter").forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll(".model-filter").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            activeModelFilter = btn.dataset.filter;
+            resetAndRenderModelPicker();
+        };
+    });
+
+    let searchTimer = 0;
+    $("model-picker-search").oninput = e => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            filterSearchKeyword = e.target.value;
+            resetAndRenderModelPicker();
+        }, 100);
+    };
+
+    $("model-manual").onkeydown = e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            applyManualModel();
+        }
+    };
+
+    // 移动端 Bottom Sheet 下拉轻扫收起支持
+    (() => {
+        let sheetStartY = 0;
+        const panel = $("model-picker-panel");
+        panel.addEventListener("touchstart", e => {
+            if (e.target.closest(".model-picker-list, input, button")) return;
+            sheetStartY = e.touches[0].clientY;
+        }, { passive: true });
+        panel.addEventListener("touchend", e => {
+            if (e.changedTouches.length !== 1) return;
+            const deltaY = e.changedTouches[0].clientY - sheetStartY;
+            if (deltaY > 55 && window.innerWidth <= 768) {
+                closeModelPicker();
+            }
+        }, { passive: true });
+    })();
+
+    $("prompt-profile-select").onchange = e => {
+        $("system-prompt").value = PROMPT_PRESETS[e.target.value] || PROMPT_PRESETS.standard;
+        saveSettings();
+    };
+
+    document.querySelectorAll(".token-chip").forEach(c => c.onclick = () => {
+        $("max-tokens").value = c.dataset.v;
+        document.querySelectorAll(".token-chip").forEach(x => x.classList.remove("active"));
+        c.classList.add("active");
+        updateModelBadge();
+        saveSettings();
+    });
+
+    $("max-tokens").oninput = () => {
+        const v = $("max-tokens").value;
+        document.querySelectorAll(".token-chip").forEach(x => x.classList.toggle("active", x.dataset.v === v));
+        updateModelBadge();
+        saveSettings();
+    };
+
+    $("max-img-turns").oninput = saveSettings;
+
+    $("temp").oninput = e => {
+        $("temp-val").textContent = e.target.value;
+        saveSettings();
+    };
+
+    $("theme-quick").onclick = () => {
+        themeMode = document.documentElement.classList.contains("dark") ? "light" : "dark";
+        applyTheme();
+        if (window.mermaid) {
+            mermaid.initialize({ startOnLoad: false, theme: themeMode === 'dark' ? 'dark' : 'neutral' });
+        }
+    };
+
+    document.querySelectorAll(".theme-chip").forEach(c => c.onclick = () => {
+        themeMode = c.dataset.t;
+        applyTheme();
+    });
+
+    // 消除强制同步重排的平滑输入框算法
+    const ta = $("text-input");
+    ta.onkeydown = e => {
+        if (e.isComposing || e.keyCode === 229) return;
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSendOrStop();
+        }
+    };
+    ta.oninput = () => {
+        ta.style.height = "auto";
+        const targetHeight = Math.min(Math.max(ta.scrollHeight, 42), 140);
+        ta.style.height = targetHeight + "px";
+    };
+
+    ta.addEventListener("paste", async e => {
+        const items = (e.clipboardData || window.clipboardData)?.items;
+        if (!items) return;
+        for (const item of items) {
+            if (item.type.indexOf("image") !== -1) {
+                const file = item.getAsFile();
+                if (file) {
+                    const compressed = await compressImage(file);
+                    currentAttachments.push({ type: "image", data: compressed, name: `截图_${Date.now()}.jpg` });
+                    updatePreviewStrip();
+                }
+            }
+        }
+    });
+
+    const chatbox = $("chatbox");
+    chatbox.addEventListener("scroll", () => {
+        const distFromBottom = chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight;
+        userScrolledUp = distFromBottom > 75;
+        $("scroll-bottom-btn").classList.toggle("show", userScrolledUp);
+    }, { passive: true });
+
+    $("scroll-bottom-btn").onclick = () => {
+        userScrolledUp = false;
+        scrollChatToBottom(true);
+        $("scroll-bottom-btn").classList.remove("show");
+    };
+
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape") {
+            closeSidebar(); closeModelPicker(); closePreviewModal();
+            closeAttachModal(); closeAddSkillModal(); closeMistakeRecordModal();
+            closeMistakeManageModal(); closeHandoffModal();
+        }
+    });
+}
+
+function updateModelBadge() {
+    const m = getSelectedModel();
+    const tokens = safeTokens();
+    const tokenK = tokens >= 1024 ? Math.round(tokens / 1024) + "K" : tokens;
+    const providerBase = $("base-url-select").value === "custom" ? $("custom-base-url").value : $("base-url-select").value;
+    const modelLimit = getModelMaxCompletionLimit(m, providerBase);
+    const limitK = modelLimit >= 1024 ? Math.round(modelLimit / 1024) + "K" : modelLimit;
+
+    const providerName = $("base-url-select").options[$("base-url-select").selectedIndex]?.text?.split(" ")[0] || "AI";
+    
+    // 同步顶部快捷药丸
+    $("model-badge").textContent = `${providerName} · ${m}`;
+    
+    // 同步侧边栏精致卡片
+    $("model-picker-current").textContent = m;
+    $("sidebar-provider-tag").textContent = providerName;
+    $("sidebar-model-sub").textContent = `单次配额 ~${limitK} · 总量 ${tokenK}`;
+    
+    $("budget-meter").textContent = `模型：${m} · 单次最大生成配额适配为 ${limitK} (总上下文 ${tokenK})`;
+}
+
+function setModelStatus(t, kind) {
+    $("model-status").textContent = t;
+    $("model-status").style.color = kind === "ok" ? "var(--ok)" : (kind === "err" ? "var(--danger)" : "var(--text3)");
+}
+
+function setStatus(t, kind) {
+    $("status-text").textContent = t;
+    $("status-dot").className = "status-dot" + (kind ? " " + kind : "");
+}
+
+function applyTheme() {
+    document.documentElement.classList.toggle("dark", themeMode === "dark");
+    localStorage.setItem("v11_theme", themeMode);
+}
+
+function toggleKeyVis() {
+    $("api-key").type = $("api-key").type === "password" ? "text" : "password";
+}
+
+function scrollChatToBottom(force) {
+    const b = $("chatbox");
+    if (b && (force || !userScrolledUp)) {
+        b.scrollTop = b.scrollHeight;
+    }
+}
+
+/* ==================== 增强版代码沙箱与全屏切换系统 ==================== */
+let currentPreviewCode = "";
+
+function openPreviewModal(code) {
+    let fullHtml = buildSvgWrapper(code);
+    currentPreviewCode = fullHtml;
+    $("code-modal").style.display = "flex";
+    $("preview-frame").srcdoc = fullHtml;
+}
+
+function closePreviewModal() {
+    $("code-modal").style.display = "none";
+    $("preview-frame").srcdoc = "";
+    currentPreviewCode = "";
+    $("preview-box-modal").classList.remove("is-fullscreen");
+}
+
+function reloadPreview() {
+    if (currentPreviewCode) {
+        $("preview-frame").srcdoc = "";
+        setTimeout(() => { $("preview-frame").srcdoc = currentPreviewCode; }, 50);
+    }
+}
+
+function togglePreviewFullscreen() {
+    $("preview-box-modal").classList.toggle("is-fullscreen");
+}
+
+function openPreviewInNewTab() {
+    if (!currentPreviewCode) return;
+    const blob = new Blob([currentPreviewCode], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+}
+
+function openAttachModal() { $("attach-modal").style.display = "flex"; }
+function closeAttachModal() { $("attach-modal").style.display = "none"; }
+function triggerFile(acc) { closeAttachModal(); $("file-input").accept = acc; $("file-input").click(); }
+
+function compressImage(file, maxDimension = 1280, quality = 0.8) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) { height = Math.round((height * maxDimension) / width); width = maxDimension; }
+                    else { width = Math.round((width * maxDimension) / height); height = maxDimension; }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL("image/jpeg", quality));
+            };
+            img.onerror = () => resolve(e.target.result);
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function onFilePicked(e) {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) {
+        if (f.type.startsWith("image/")) {
+            const compressed = await compressImage(f);
+            currentAttachments.push({ type: "image", data: compressed, name: f.name });
+        } else {
+            const textContent = await new Promise(resolve => {
+                const r = new FileReader();
+                r.onload = ev => resolve(ev.target.result);
+                r.readAsText(f);
+            });
+            currentAttachments.push({ type: "text", data: textContent, name: f.name });
+        }
+    }
+    updatePreviewStrip();
+    e.target.value = "";
+}
+
+function updatePreviewStrip() {
+    const strip = $("preview-strip");
+    strip.innerHTML = "";
+    if (!currentAttachments.length) { $("preview-bar").style.display = "none"; return; }
+    $("preview-bar").style.display = "flex";
+    currentAttachments.forEach((att, idx) => {
+        const item = document.createElement("div");
+        item.className = "attachment-item";
+        item.innerHTML = `<span>${att.type === "image" ? "🖼️" : "📄"} ${esc(att.name)}</span><span class="del-att" onclick="removeAttachment(${idx})">×</span>`;
+        strip.appendChild(item);
+    });
+}
+
+function removeAttachment(idx) { currentAttachments.splice(idx, 1); updatePreviewStrip(); }
+function clearAttachment() { currentAttachments = []; updatePreviewStrip(); }
+
+function clearHistory() {
+    if (!confirm("清空当前会话全部历史？")) return;
+    history = [];
+    saveHistory();
+    redrawChatbox();
+}
+
+function exportConfig() {
+    const cfg = {
+        base: $("base-url-select").value,
+        custom: $("custom-base-url").value,
+        model: getSelectedModel(),
+        tokens: $("max-tokens").value,
+        sys: $("system-prompt").value,
+        skills: customSkills,
+        mistakes: mistakeBook
+    };
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `fsy_config_${Date.now()}.json`;
+    a.click();
+}
+
+function exportMarkdown() {
+    if (!history.length) return alert("暂无可导出内容");
+    let md = "# 对话记录导出\n\n";
+    history.forEach(m => {
+        md += `### ${m.role === "user" ? "User" : "Assistant"}\n\n`;
+        if (m.reasoning_content) md += `> **思考过程**：\n> ${m.reasoning_content.replace(/\n/g, "\n> ")}\n\n`;
+        md += (typeof m.content === "string" ? m.content : "[多模态附件]") + "\n\n---\n\n";
+    });
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `chat_${Date.now()}.md`;
+    a.click();
+}
+
+async function testConnection() {
+    const key = $("api-key").value.trim();
+    if (!key) return alert("请先填写 API Key");
+    setStatus("测试中…", "busy");
+    try {
+        const model = getSelectedModel();
+        const testBody = {
+            model,
+            messages: [{ role: "user", content: "hi" }]
+        };
+        if (/o1|o3/i.test(model)) {
+            testBody.max_completion_tokens = 100;
+        } else {
+            testBody.max_tokens = 10;
+        }
+        const res = await fetch(getEndpoint(), {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+            body: JSON.stringify(testBody)
+        });
+        if (res.ok) {
+            setStatus("连通成功");
+            alert("✅ 接口连通测试成功！API Key 与模型响应正常。");
+        } else {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        }
+    } catch (e) {
+        setStatus("连接失败", "err");
+        alert("❌ 测试连接失败：" + e.message);
+    }
+}
+</script>
+</body>
+</html>
