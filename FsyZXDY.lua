@@ -1,6 +1,10 @@
--- [[ 重型钓鱼 (Heavyweight Fishing) 精简版 ]]
+-- [[ 重型钓鱼 (Heavyweight Fishing) 手机&电脑自适应精简版 ]]
 -- 保留核心功能：自动钓鱼、小游戏完美收线、自动卖鱼(含0-60分钟定时卖鱼&传送往返)/防爆背包、防挂机与断线重连、全地图与NPC传送、配置管理
--- 已移除无用模块：Boss自动刷取、神灵与跳服、每日任务/兑换码、商店扭蛋/制作、ESP透视与画质修改、飞行/穿墙/加速等高风险功能
+-- 手机端特别优化：
+--   1. 大幅缩小窗口尺寸 + 自动适配手机屏幕分辨率，不再遮挡游戏画面
+--   2. 全面支持手机触屏拖动窗口、拖动悬浮球、滑动滑块 (支持 Touch 触控事件)
+--   3. 悬浮球常驻屏幕左上角，手机点击一下即可随时收起/展开菜单
+--   4. 设置页新增【界面缩放比例 (50%~120%)】滑块，可自由调节窗口大小
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
@@ -28,6 +32,9 @@ local activeConnections = {}
 local cleanUpInstances = {}
 
 local Events = ReplicatedStorage:WaitForChild("Events", 10)
+
+-- 判断是否为手机/触屏设备
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 -- 配置项
 local Config = {
@@ -64,6 +71,7 @@ local Config = {
     AutoRejoin = false, -- 被踢/断线自动重连
     
     -- 界面与配置
+    UIScalePercent = isMobile and 80 or 95, -- UI缩放百分比(手机默认80%更小巧)
     UIKeybind = Enum.KeyCode.RightControl, -- 界面快捷键
     StopKeybind = Enum.KeyCode.End, -- 卸载快捷键
     ActiveProfile = "default", -- 配置文件名
@@ -189,6 +197,7 @@ end
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "IdenticalHeavyweightFishing_Lite"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = getGuiParent()
 table.insert(cleanUpInstances, screenGui)
@@ -211,11 +220,11 @@ end
 
 if getgenv then getgenv().IdenticalHeavyweightFishingUnload = UnloadScript end
 
--- 通知系统
+-- 通知系统 (针对手机缩小尺寸，避免挡住右侧操作)
 local notifContainer = Instance.new("Frame")
 notifContainer.Name = "Notifications"
-notifContainer.Size = UDim2.new(0, 300, 1, -40)
-notifContainer.Position = UDim2.new(1, -315, 0, 20)
+notifContainer.Size = UDim2.new(0, 220, 1, -30)
+notifContainer.Position = UDim2.new(1, -230, 0, 15)
 notifContainer.BackgroundTransparency = 1
 notifContainer.ZIndex = 1000
 notifContainer.Parent = screenGui
@@ -224,177 +233,202 @@ table.insert(cleanUpInstances, notifContainer)
 local notifLayout = Instance.new("UIListLayout")
 notifLayout.SortOrder = Enum.SortOrder.LayoutOrder
 notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-notifLayout.Padding = UDim.new(0, 8)
+notifLayout.Padding = UDim.new(0, 6)
 notifLayout.Parent = notifContainer
 
 local function ShowNotification(title, text, notifType, duration)
     if not isRunning then return end
-    duration = duration or 3.5
+    duration = duration or 2.8
     local accentColor = Colors.PurpleAccent
     if notifType == "SUCCESS" then accentColor = Colors.AccentGreen
     elseif notifType == "WARN" then accentColor = Colors.AccentYellow
     elseif notifType == "ERROR" then accentColor = Colors.AccentRed end
 
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 60)
+    card.Size = UDim2.new(1, 0, 0, 48)
     card.BackgroundColor3 = Colors.Background
-    card.BackgroundTransparency = 0.05
+    card.BackgroundTransparency = 0.08
     card.BorderSizePixel = 0
     card.ClipsDescendants = true
     card.Parent = notifContainer
 
-    local stroke = Instance.new("UIStroke"); stroke.Color = accentColor; stroke.Thickness = 1.2; stroke.Parent = card
+    local stroke = Instance.new("UIStroke"); stroke.Color = accentColor; stroke.Thickness = 1; stroke.Parent = card
     local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, 6); corner.Parent = card
-    local topBar = Instance.new("Frame"); topBar.Size = UDim2.new(1, 0, 0, 20); topBar.BackgroundTransparency = 1; topBar.Position = UDim2.new(0, 10, 0, 6); topBar.Parent = card
-    local tLabel = Instance.new("TextLabel"); tLabel.Size = UDim2.new(1, -20, 1, 0); tLabel.BackgroundTransparency = 1; tLabel.Font = Enum.Font.GothamBold; tLabel.Text = title; tLabel.TextColor3 = Colors.PurplePrimary; tLabel.TextSize = 13; tLabel.TextXAlignment = Enum.TextXAlignment.Left; tLabel.Parent = topBar
-    local mLabel = Instance.new("TextLabel"); mLabel.Size = UDim2.new(1, -20, 0, 26); mLabel.Position = UDim2.new(0, 10, 0, 26); mLabel.BackgroundTransparency = 1; mLabel.Font = Enum.Font.Gotham; mLabel.Text = text; mLabel.TextColor3 = Colors.TextSubtle; mLabel.TextSize = 11; mLabel.TextXAlignment = Enum.TextXAlignment.Left; mLabel.TextWrapped = true; mLabel.Parent = card
+    local topBar = Instance.new("Frame"); topBar.Size = UDim2.new(1, 0, 0, 16); topBar.BackgroundTransparency = 1; topBar.Position = UDim2.new(0, 8, 0, 4); topBar.Parent = card
+    local tLabel = Instance.new("TextLabel"); tLabel.Size = UDim2.new(1, -16, 1, 0); tLabel.BackgroundTransparency = 1; tLabel.Font = Enum.Font.GothamBold; tLabel.Text = title; tLabel.TextColor3 = Colors.PurplePrimary; tLabel.TextSize = 11; tLabel.TextXAlignment = Enum.TextXAlignment.Left; tLabel.Parent = topBar
+    local mLabel = Instance.new("TextLabel"); mLabel.Size = UDim2.new(1, -16, 0, 22); mLabel.Position = UDim2.new(0, 8, 0, 20); mLabel.BackgroundTransparency = 1; mLabel.Font = Enum.Font.Gotham; mLabel.Text = text; mLabel.TextColor3 = Colors.TextSubtle; tLabel.TextSize = 11; mLabel.TextSize = 10; mLabel.TextXAlignment = Enum.TextXAlignment.Left; mLabel.TextWrapped = true; mLabel.Parent = card
 
     task.delay(duration, function()
         if card and card.Parent then
-            TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            TweenService:Create(card, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundTransparency = 1, Position = card.Position + UDim2.new(1, 20, 0, 0)
             }):Play()
-            task.wait(0.35); card:Destroy()
+            task.wait(0.3); card:Destroy()
         end
     end)
 end
 
--- 悬浮球切换
+-- 通用触控/鼠标拖拽绑定函数 (兼容手机Touch与电脑鼠标)
+local function MakeDraggable(triggerGui, targetGui)
+    local dragging = false
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+    local moved = false
+
+    triggerGui.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            moved = false
+            dragStart = input.Position
+            startPos = targetGui.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    triggerGui.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    table.insert(activeConnections, UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 4 then moved = true end
+            targetGui.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end))
+
+    return function() return moved end
+end
+
+-- 常驻悬浮球 (手机端随时点击隐藏/显示菜单，支持手指拖动位置)
 local ToggleUiVisibility
-local floatingCrescent = Instance.new("ImageButton")
+local floatingCrescent = Instance.new("TextButton")
 floatingCrescent.Name = "FloatingCrescent"
-floatingCrescent.Size = UDim2.new(0, 44, 0, 44)
-floatingCrescent.Position = UDim2.new(0, 20, 0, 20)
+floatingCrescent.Size = UDim2.new(0, 42, 0, 42)
+floatingCrescent.Position = UDim2.new(0, 16, 0, 60)
 floatingCrescent.BackgroundColor3 = Colors.Background
+floatingCrescent.BackgroundTransparency = 0.1
 floatingCrescent.BorderSizePixel = 0
-floatingCrescent.Visible = false
+floatingCrescent.Text = "钓"
+floatingCrescent.Font = Enum.Font.GothamBold
+floatingCrescent.TextColor3 = Colors.PurplePrimary
+floatingCrescent.TextSize = 15
+floatingCrescent.Visible = true -- 常驻显示，方便手机一键收起/打开
 floatingCrescent.ZIndex = 1000
 floatingCrescent.Parent = screenGui
 table.insert(cleanUpInstances, floatingCrescent)
 
 do
     local fcCorner = Instance.new("UICorner"); fcCorner.CornerRadius = UDim.new(1, 0); fcCorner.Parent = floatingCrescent
-    local fcStroke = Instance.new("UIStroke"); fcStroke.Color = Colors.PurpleAccent; fcStroke.Thickness = 1.5; fcStroke.Parent = floatingCrescent
-    local fcIconContainer = Instance.new("Frame"); fcIconContainer.Size = UDim2.new(0, 24, 0, 24); fcIconContainer.Position = UDim2.new(0.5, -12, 0.5, -12); fcIconContainer.BackgroundTransparency = 1; fcIconContainer.ClipsDescendants = true; fcIconContainer.Parent = floatingCrescent
-    local fcOuter = Instance.new("Frame"); fcOuter.Size = UDim2.new(0, 24, 0, 24); fcOuter.BackgroundColor3 = Colors.PurplePrimary; fcOuter.BorderSizePixel = 0; fcOuter.Parent = fcIconContainer
-    local fcOC = Instance.new("UICorner"); fcOC.CornerRadius = UDim.new(1, 0); fcOC.Parent = fcOuter
-    local fcCutout = Instance.new("Frame"); fcCutout.Size = UDim2.new(0, 20, 0, 20); fcCutout.Position = UDim2.new(0, 6, 0, -3); fcCutout.BackgroundColor3 = Colors.Background; fcCutout.BorderSizePixel = 0; fcCutout.Parent = fcOuter
-    local fcCC = Instance.new("UICorner"); fcCC.CornerRadius = UDim.new(1, 0); fcCC.Parent = fcCutout
-
-    local fcDragging, fcDragInput, fcDragStart, fcStartPos = false, nil, nil, nil
-    floatingCrescent.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            fcDragging = true; fcDragStart = input.Position; fcStartPos = floatingCrescent.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then fcDragging = false end end)
+    local fcStroke = Instance.new("UIStroke"); fcStroke.Color = Colors.PurpleAccent; fcStroke.Thickness = 1.8; fcStroke.Parent = floatingCrescent
+    local wasDragged = MakeDraggable(floatingCrescent, floatingCrescent)
+    floatingCrescent.Activated:Connect(function()
+        if not wasDragged() and ToggleUiVisibility then
+            ToggleUiVisibility()
         end
     end)
-    floatingCrescent.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then fcDragInput = input end end)
-    table.insert(activeConnections, UserInputService.InputChanged:Connect(function(input)
-        if input == fcDragInput and fcDragging then
-            local delta = input.Position - fcDragStart
-            floatingCrescent.Position = UDim2.new(fcStartPos.X.Scale, fcStartPos.X.Offset + delta.X, fcStartPos.Y.Scale, fcStartPos.Y.Offset + delta.Y)
-        end
-    end))
-    floatingCrescent.MouseEnter:Connect(function()
-        TweenService:Create(floatingCrescent, TweenInfo.new(0.15), {BackgroundColor3 = Colors.PurpleDark}):Play()
-        TweenService:Create(fcStroke, TweenInfo.new(0.15), {Color = Colors.PurpleGlow}):Play()
-        fcCutout.BackgroundColor3 = Colors.PurpleDark
-    end)
-    floatingCrescent.MouseLeave:Connect(function()
-        TweenService:Create(floatingCrescent, TweenInfo.new(0.15), {BackgroundColor3 = Colors.Background}):Play()
-        TweenService:Create(fcStroke, TweenInfo.new(0.15), {Color = Colors.PurpleAccent}):Play()
-        fcCutout.BackgroundColor3 = Colors.Background
-    end)
-    floatingCrescent.MouseButton1Click:Connect(function() if ToggleUiVisibility then ToggleUiVisibility() end end)
 end
 
--- 主窗口
+-- 主窗口 (紧凑尺寸 460x290，专门适配手机横屏，不再占满屏幕)
+local BASE_WIDTH = 460
+local BASE_HEIGHT = 290
+
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 680, 0, 460)
-mainFrame.Position = UDim2.new(0.5, -340, 0.5, -230)
+mainFrame.Size = UDim2.new(0, BASE_WIDTH, 0, BASE_HEIGHT)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 mainFrame.BackgroundColor3 = Colors.Background
+mainFrame.BackgroundTransparency = 0.04
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 table.insert(cleanUpInstances, mainFrame)
+
+-- UI整体缩放器 (自动根据手机屏幕高度适配 + 支持手动调整)
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = mainFrame
+
+local function ApplyUIScale()
+    local vp = Camera and Camera.ViewportSize or Vector2.new(800, 450)
+    local userScale = (Config.UIScalePercent or 85) / 100
+    -- 确保窗口高度不超过屏幕高度的 78%，宽度不超过屏幕宽度的 75%
+    local maxScaleH = (vp.Y * 0.78) / BASE_HEIGHT
+    local maxScaleW = (vp.X * 0.75) / BASE_WIDTH
+    local autoMax = math.min(maxScaleH, maxScaleW, 1.2)
+    uiScale.Scale = math.clamp(userScale, 0.5, math.max(0.65, autoMax))
+end
+ApplyUIScale()
+if Camera then
+    table.insert(activeConnections, Camera:GetPropertyChangedSignal("ViewportSize"):Connect(ApplyUIScale))
+end
 
 do
     local mc = Instance.new("UICorner"); mc.CornerRadius = UDim.new(0, 8); mc.Parent = mainFrame
     local ms = Instance.new("UIStroke"); ms.Color = Colors.BorderPurple; ms.Thickness = 1.5; ms.Parent = mainFrame
 end
 
--- 标题栏
+-- 标题栏 (高度压缩为 32px)
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 38)
+titleBar.Size = UDim2.new(1, 0, 0, 32)
 titleBar.BackgroundColor3 = Colors.SidebarBg
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
 do
     local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(0, 8); tc.Parent = titleBar
-    local tbf = Instance.new("Frame"); tbf.Size = UDim2.new(1, 0, 0, 10); tbf.Position = UDim2.new(0, 0, 1, -10); tbf.BackgroundColor3 = Colors.SidebarBg; tbf.BorderSizePixel = 0; tbf.Parent = titleBar
+    local tbf = Instance.new("Frame"); tbf.Size = UDim2.new(1, 0, 0, 8); tbf.Position = UDim2.new(0, 0, 1, -8); tbf.BackgroundColor3 = Colors.SidebarBg; tbf.BorderSizePixel = 0; tbf.Parent = titleBar
     local tdiv = Instance.new("Frame"); tdiv.Size = UDim2.new(1, 0, 0, 1); tdiv.Position = UDim2.new(0, 0, 1, -1); tdiv.BackgroundColor3 = Colors.Divider; tdiv.BorderSizePixel = 0; tdiv.Parent = titleBar
 end
 
-do
-    local cc = Instance.new("Frame"); cc.Size = UDim2.new(0, 16, 0, 16); cc.Position = UDim2.new(0, 14, 0.5, -8); cc.BackgroundTransparency = 1; cc.ClipsDescendants = true; cc.Parent = titleBar
-    local co = Instance.new("Frame"); co.Size = UDim2.new(0, 16, 0, 16); co.BackgroundColor3 = Colors.PurpleAccent; co.BorderSizePixel = 0; co.Parent = cc
-    Instance.new("UICorner", co).CornerRadius = UDim.new(1, 0)
-    local cut = Instance.new("Frame"); cut.Size = UDim2.new(0, 13, 0, 13); cut.Position = UDim2.new(0, 4, 0, -2); cut.BackgroundColor3 = Colors.SidebarBg; cut.BorderSizePixel = 0; cut.Parent = co
-    Instance.new("UICorner", cut).CornerRadius = UDim.new(1, 0)
-end
-
 local brandTitle = Instance.new("TextLabel")
-brandTitle.Size = UDim2.new(0, 150, 1, 0); brandTitle.Position = UDim2.new(0, 36, 0, 0)
+brandTitle.Size = UDim2.new(0, 80, 1, 0); brandTitle.Position = UDim2.new(0, 12, 0, 0)
 brandTitle.BackgroundTransparency = 1; brandTitle.Font = Enum.Font.GothamBold
 brandTitle.Text = "重型钓鱼"; brandTitle.TextColor3 = Colors.PurplePrimary
-brandTitle.TextSize = 14; brandTitle.TextXAlignment = Enum.TextXAlignment.Left
+brandTitle.TextSize = 13; brandTitle.TextXAlignment = Enum.TextXAlignment.Left
 brandTitle.Parent = titleBar
 
 local gameSubtitle = Instance.new("TextLabel")
-gameSubtitle.Size = UDim2.new(0, 220, 1, 0); gameSubtitle.Position = UDim2.new(0, 105, 0, 0)
+gameSubtitle.Size = UDim2.new(0, 220, 1, 0); gameSubtitle.Position = UDim2.new(0, 78, 0, 0)
 gameSubtitle.BackgroundTransparency = 1; gameSubtitle.Font = Enum.Font.Gotham
-gameSubtitle.Text = "精简版 [钓鱼 / 卖鱼 / 传送 / 防挂机]"; gameSubtitle.TextColor3 = Colors.PurpleMuted
+gameSubtitle.Text = "手机自适应版 (点左侧[钓]球可收起)"; gameSubtitle.TextColor3 = Colors.PurpleMuted
 gameSubtitle.TextSize = 10; gameSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 gameSubtitle.Parent = titleBar
 
-local winControls = Instance.new("Frame"); winControls.Size = UDim2.new(0, 60, 1, 0); winControls.Position = UDim2.new(1, -65, 0, 0); winControls.BackgroundTransparency = 1; winControls.Parent = titleBar
-local minBtn = Instance.new("TextButton"); minBtn.Size = UDim2.new(0, 24, 0, 24); minBtn.Position = UDim2.new(0, 4, 0.5, -12); minBtn.BackgroundColor3 = Colors.ControlBg; minBtn.Font = Enum.Font.GothamBold; minBtn.Text = "[-]"; minBtn.TextColor3 = Colors.PurplePrimary; minBtn.TextSize = 11; minBtn.BorderSizePixel = 0; minBtn.Parent = winControls
+local winControls = Instance.new("Frame"); winControls.Size = UDim2.new(0, 62, 1, 0); winControls.Position = UDim2.new(1, -66, 0, 0); winControls.BackgroundTransparency = 1; winControls.Parent = titleBar
+local minBtn = Instance.new("TextButton"); minBtn.Size = UDim2.new(0, 26, 0, 22); minBtn.Position = UDim2.new(0, 2, 0.5, -11); minBtn.BackgroundColor3 = Colors.ControlBg; minBtn.Font = Enum.Font.GothamBold; minBtn.Text = "收起"; minBtn.TextColor3 = Colors.PurplePrimary; minBtn.TextSize = 10; minBtn.BorderSizePixel = 0; minBtn.Parent = winControls
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
-local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 24, 0, 24); closeBtn.Position = UDim2.new(0, 32, 0.5, -12); closeBtn.BackgroundColor3 = Colors.ControlBg; closeBtn.Font = Enum.Font.GothamBold; closeBtn.Text = "[X]"; closeBtn.TextColor3 = Colors.AccentRed; closeBtn.TextSize = 11; closeBtn.BorderSizePixel = 0; closeBtn.Parent = winControls
+local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 26, 0, 22); closeBtn.Position = UDim2.new(0, 32, 0.5, -11); closeBtn.BackgroundColor3 = Colors.ControlBg; closeBtn.Font = Enum.Font.GothamBold; closeBtn.Text = "×"; closeBtn.TextColor3 = Colors.AccentRed; closeBtn.TextSize = 14; closeBtn.BorderSizePixel = 0; closeBtn.Parent = winControls
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 4)
 
--- 标题栏拖动
-do
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; dragStart = input.Position; startPos = mainFrame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-        end
-    end)
-    titleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
-    table.insert(activeConnections, UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end))
-end
+-- 标题栏拖动 (支持手机触控拖动窗口)
+MakeDraggable(titleBar, mainFrame)
 
-local bodyFrame = Instance.new("Frame"); bodyFrame.Name = "Body"; bodyFrame.Size = UDim2.new(1, 0, 1, -62); bodyFrame.Position = UDim2.new(0, 0, 0, 38); bodyFrame.BackgroundTransparency = 1; bodyFrame.Parent = mainFrame
+local bodyFrame = Instance.new("Frame"); bodyFrame.Name = "Body"; bodyFrame.Size = UDim2.new(1, 0, 1, -52); bodyFrame.Position = UDim2.new(0, 0, 0, 32); bodyFrame.BackgroundTransparency = 1; bodyFrame.Parent = mainFrame
 
-local sidebar = Instance.new("Frame"); sidebar.Name = "Sidebar"; sidebar.Size = UDim2.new(0, 130, 1, 0); sidebar.BackgroundColor3 = Colors.SidebarBg; sidebar.BorderSizePixel = 0; sidebar.Parent = bodyFrame
+-- 紧凑侧边栏 (宽度 92px)
+local sidebar = Instance.new("Frame"); sidebar.Name = "Sidebar"; sidebar.Size = UDim2.new(0, 92, 1, 0); sidebar.BackgroundColor3 = Colors.SidebarBg; sidebar.BorderSizePixel = 0; sidebar.Parent = bodyFrame
 do local d = Instance.new("Frame"); d.Size = UDim2.new(0, 1, 1, 0); d.Position = UDim2.new(1, -1, 0, 0); d.BackgroundColor3 = Colors.Divider; d.BorderSizePixel = 0; d.Parent = sidebar end
 
 local searchBox = Instance.new("TextBox")
-searchBox.Name = "SearchBar"; searchBox.Size = UDim2.new(1, -16, 0, 26); searchBox.Position = UDim2.new(0, 8, 0, 8)
-searchBox.BackgroundColor3 = Colors.InputBg; searchBox.Font = Enum.Font.Gotham; searchBox.PlaceholderText = "搜索功能..."
+searchBox.Name = "SearchBar"; searchBox.Size = UDim2.new(1, -12, 0, 22); searchBox.Position = UDim2.new(0, 6, 0, 6)
+searchBox.BackgroundColor3 = Colors.InputBg; searchBox.Font = Enum.Font.Gotham; searchBox.PlaceholderText = "搜索..."
 searchBox.PlaceholderColor3 = Colors.TextMuted; searchBox.Text = ""; searchBox.TextColor3 = Colors.TextWhite
-searchBox.TextSize = 11; searchBox.TextXAlignment = Enum.TextXAlignment.Left; searchBox.BorderSizePixel = 0; searchBox.ClearTextOnFocus = false; searchBox.Parent = sidebar
-do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 8); p.Parent = searchBox end
+searchBox.TextSize = 10; searchBox.TextXAlignment = Enum.TextXAlignment.Left; searchBox.BorderSizePixel = 0; searchBox.ClearTextOnFocus = false; searchBox.Parent = sidebar
+do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 6); p.Parent = searchBox end
 Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 4)
 
 local rowSearchIndex = {}
@@ -409,13 +443,13 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
-local navList = Instance.new("ScrollingFrame"); navList.Name = "NavList"; navList.Size = UDim2.new(1, 0, 1, -44); navList.Position = UDim2.new(0, 0, 0, 42); navList.BackgroundTransparency = 1; navList.BorderSizePixel = 0; navList.ScrollBarThickness = 2; navList.ScrollBarImageColor3 = Colors.BorderSubtle; navList.CanvasSize = UDim2.new(0, 0, 0, 0); navList.AutomaticCanvasSize = Enum.AutomaticSize.Y; navList.Parent = sidebar
+local navList = Instance.new("ScrollingFrame"); navList.Name = "NavList"; navList.Size = UDim2.new(1, 0, 1, -34); navList.Position = UDim2.new(0, 0, 0, 32); navList.BackgroundTransparency = 1; navList.BorderSizePixel = 0; navList.ScrollBarThickness = 2; navList.ScrollBarImageColor3 = Colors.BorderSubtle; navList.CanvasSize = UDim2.new(0, 0, 0, 0); navList.AutomaticCanvasSize = Enum.AutomaticSize.Y; navList.Parent = sidebar
 do
     local nl = Instance.new("UIListLayout"); nl.SortOrder = Enum.SortOrder.LayoutOrder; nl.Padding = UDim.new(0, 4); nl.Parent = navList
-    local np = Instance.new("UIPadding"); np.PaddingTop = UDim.new(0, 6); np.PaddingLeft = UDim.new(0, 8); np.PaddingRight = UDim.new(0, 8); np.Parent = navList
+    local np = Instance.new("UIPadding"); np.PaddingTop = UDim.new(0, 4); np.PaddingLeft = UDim.new(0, 6); np.PaddingRight = UDim.new(0, 6); np.Parent = navList
 end
 
-local contentArea = Instance.new("Frame"); contentArea.Name = "ContentArea"; contentArea.Size = UDim2.new(1, -130, 1, 0); contentArea.Position = UDim2.new(0, 130, 0, 0); contentArea.BackgroundTransparency = 1; contentArea.Parent = bodyFrame
+local contentArea = Instance.new("Frame"); contentArea.Name = "ContentArea"; contentArea.Size = UDim2.new(1, -92, 1, 0); contentArea.Position = UDim2.new(0, 92, 0, 0); contentArea.BackgroundTransparency = 1; contentArea.Parent = bodyFrame
 
 local tabFrames = {}
 local tabButtons = {}
@@ -434,44 +468,45 @@ local function SwitchTab(tabName)
 end
 
 local function CreateTab(name)
-    local btn = Instance.new("TextButton"); btn.Name = "TabBtn_" .. name; btn.Size = UDim2.new(1, 0, 0, 32); btn.BackgroundColor3 = Colors.SidebarBg; btn.Font = Enum.Font.GothamBold; btn.Text = name; btn.TextColor3 = Colors.TextSubtle; btn.TextSize = 12; btn.TextXAlignment = Enum.TextXAlignment.Left; btn.BorderSizePixel = 0; btn.Parent = navList
+    local btn = Instance.new("TextButton"); btn.Name = "TabBtn_" .. name; btn.Size = UDim2.new(1, 0, 0, 28); btn.BackgroundColor3 = Colors.SidebarBg; btn.Font = Enum.Font.GothamBold; btn.Text = name; btn.TextColor3 = Colors.TextSubtle; btn.TextSize = 11; btn.TextXAlignment = Enum.TextXAlignment.Left; btn.BorderSizePixel = 0; btn.Parent = navList
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 12); p.Parent = btn end
-    local pill = Instance.new("Frame"); pill.Name = "ActivePill"; pill.Size = UDim2.new(0, 3, 0, 16); pill.Position = UDim2.new(0, -9, 0.5, -8); pill.BackgroundColor3 = Colors.PurpleAccent; pill.BorderSizePixel = 0; pill.Visible = false; pill.Parent = btn
+    do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 10); p.Parent = btn end
+    local pill = Instance.new("Frame"); pill.Name = "ActivePill"; pill.Size = UDim2.new(0, 3, 0, 14); pill.Position = UDim2.new(0, -7, 0.5, -7); pill.BackgroundColor3 = Colors.PurpleAccent; pill.BorderSizePixel = 0; pill.Visible = false; pill.Parent = btn
     Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 2)
-    btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
+    btn.Activated:Connect(function() SwitchTab(name) end)
 
-    local page = Instance.new("ScrollingFrame"); page.Name = "TabPage_" .. name; page.Size = UDim2.new(1, 0, 1, 0); page.BackgroundTransparency = 1; page.BorderSizePixel = 0; page.ScrollBarThickness = 3; page.ScrollBarImageColor3 = Colors.BorderPurple; page.CanvasSize = UDim2.new(0, 0, 0, 0); page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.Visible = false; page.Parent = contentArea
+    local page = Instance.new("ScrollingFrame"); page.Name = "TabPage_" .. name; page.Size = UDim2.new(1, 0, 1, 0); page.BackgroundTransparency = 1; page.BorderSizePixel = 0; page.ScrollBarThickness = 4; page.ScrollBarImageColor3 = Colors.BorderPurple; page.CanvasSize = UDim2.new(0, 0, 0, 0); page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.Visible = false; page.Parent = contentArea
     do
-        local pl = Instance.new("UIListLayout"); pl.SortOrder = Enum.SortOrder.LayoutOrder; pl.Padding = UDim.new(0, 10); pl.Parent = page
-        local pp = Instance.new("UIPadding"); pp.PaddingTop = UDim.new(0, 12); pp.PaddingBottom = UDim.new(0, 16); pp.PaddingLeft = UDim.new(0, 14); pp.PaddingRight = UDim.new(0, 14); pp.Parent = page
+        local pl = Instance.new("UIListLayout"); pl.SortOrder = Enum.SortOrder.LayoutOrder; pl.Padding = UDim.new(0, 6); pl.Parent = page
+        local pp = Instance.new("UIPadding"); pp.PaddingTop = UDim.new(0, 8); pp.PaddingBottom = UDim.new(0, 12); pp.PaddingLeft = UDim.new(0, 10); pp.PaddingRight = UDim.new(0, 10); pp.Parent = page
     end
     tabFrames[name] = page; tabButtons[name] = btn
     return page
 end
 
--- 底部栏
-local footerBar = Instance.new("Frame"); footerBar.Name = "FooterBar"; footerBar.Size = UDim2.new(1, 0, 0, 24); footerBar.Position = UDim2.new(0, 0, 1, -24); footerBar.BackgroundColor3 = Colors.SidebarBg; footerBar.BorderSizePixel = 0; footerBar.Parent = mainFrame
+-- 底部栏 (20px)
+local footerBar = Instance.new("Frame"); footerBar.Name = "FooterBar"; footerBar.Size = UDim2.new(1, 0, 0, 20); footerBar.Position = UDim2.new(0, 0, 1, -20); footerBar.BackgroundColor3 = Colors.SidebarBg; footerBar.BorderSizePixel = 0; footerBar.Parent = mainFrame
 Instance.new("UICorner", footerBar).CornerRadius = UDim.new(0, 8)
 do
-    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, 0, 0, 10); tf.BackgroundColor3 = Colors.SidebarBg; tf.BorderSizePixel = 0; tf.Parent = footerBar
+    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, 0, 0, 8); tf.BackgroundColor3 = Colors.SidebarBg; tf.BorderSizePixel = 0; tf.Parent = footerBar
     local fd = Instance.new("Frame"); fd.Size = UDim2.new(1, 0, 0, 1); fd.BackgroundColor3 = Colors.Divider; fd.BorderSizePixel = 0; fd.Parent = footerBar
 end
-local footerBrand = Instance.new("TextLabel"); footerBrand.Size = UDim2.new(0, 260, 1, 0); footerBrand.Position = UDim2.new(0, 12, 0, 0); footerBrand.BackgroundTransparency = 1; footerBrand.Font = Enum.Font.Gotham; footerBrand.Text = "Heavyweight Fishing | 精简版"; footerBrand.TextColor3 = Colors.TextMuted; footerBrand.TextSize = 10; footerBrand.TextXAlignment = Enum.TextXAlignment.Left; footerBrand.Parent = footerBar
-local footerKey = Instance.new("TextLabel"); footerKey.Size = UDim2.new(0, 280, 1, 0); footerKey.Position = UDim2.new(1, -292, 0, 0); footerKey.BackgroundTransparency = 1; footerKey.Font = Enum.Font.Gotham; footerKey.Text = "[R-CTRL] 隐藏/显示菜单 | [END] 卸载脚本"; footerKey.TextColor3 = Colors.TextMuted; footerKey.TextSize = 10; footerKey.TextXAlignment = Enum.TextXAlignment.Right; footerKey.Parent = footerBar
+local footerBrand = Instance.new("TextLabel"); footerBrand.Size = UDim2.new(0.5, -10, 1, 0); footerBrand.Position = UDim2.new(0, 10, 0, 0); footerBrand.BackgroundTransparency = 1; footerBrand.Font = Enum.Font.Gotham; footerBrand.Text = "Heavyweight Fishing | 手机精简版"; footerBrand.TextColor3 = Colors.TextMuted; footerBrand.TextSize = 9; footerBrand.TextXAlignment = Enum.TextXAlignment.Left; footerBrand.Parent = footerBar
+local footerKey = Instance.new("TextLabel"); footerKey.Size = UDim2.new(0.5, -10, 1, 0); footerKey.Position = UDim2.new(0.5, 0, 0, 0); footerKey.BackgroundTransparency = 1; footerKey.Font = Enum.Font.Gotham; footerKey.Text = "点左上角[钓]球随时隐藏界面"; footerKey.TextColor3 = Colors.TextMuted; footerKey.TextSize = 9; footerKey.TextXAlignment = Enum.TextXAlignment.Right; footerKey.Parent = footerBar
 
 ToggleUiVisibility = function()
     mainFrame.Visible = not mainFrame.Visible
-    floatingCrescent.Visible = not mainFrame.Visible
+    floatingCrescent.Text = mainFrame.Visible and "收" or "钓"
+    floatingCrescent.BackgroundColor3 = mainFrame.Visible and Colors.PurpleDark or Colors.Background
 end
 
-minBtn.MouseButton1Click:Connect(ToggleUiVisibility)
-closeBtn.MouseButton1Click:Connect(UnloadScript)
+minBtn.Activated:Connect(ToggleUiVisibility)
+closeBtn.Activated:Connect(UnloadScript)
 
--- UI 构建辅助函数
+-- UI 构建辅助函数 (紧凑行高 36px，适配小屏)
 local function createCategoryHeader(parent, text)
-    local hdr = Instance.new("Frame"); hdr.Size = UDim2.new(1, 0, 0, 22); hdr.BackgroundTransparency = 1; hdr.Parent = parent
-    local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.Text = string.upper(text); lbl.TextColor3 = Colors.PurplePrimary; lbl.TextSize = 11; lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Parent = hdr
+    local hdr = Instance.new("Frame"); hdr.Size = UDim2.new(1, 0, 0, 18); hdr.BackgroundTransparency = 1; hdr.Parent = parent
+    local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(1, 0, 1, 0); lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.Text = string.upper(text); lbl.TextColor3 = Colors.PurplePrimary; lbl.TextSize = 10; lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Parent = hdr
     return hdr
 end
 
@@ -483,14 +518,13 @@ local function createCardGroup(parent)
     return group
 end
 
-local function createBaseRow(parent, labelText, descText, indexSearch)
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 42); row.BackgroundColor3 = Colors.RowNormal; row.BorderSizePixel = 0; row.Parent = parent
-    local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10); pad.Parent = row
-    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, -190, 1, 0); tf.BackgroundTransparency = 1; tf.Parent = row
-    local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0, 18); tl.Position = UDim2.new(0, 0, 0, 4); tl.BackgroundTransparency = 1; tl.Font = Enum.Font.GothamBold; tl.Text = labelText; tl.TextColor3 = Colors.TextWhite; tl.TextSize = 12; tl.TextXAlignment = Enum.TextXAlignment.Left; tl.Parent = tf
-    local dl = Instance.new("TextLabel"); dl.Size = UDim2.new(1, 0, 0, 14); dl.Position = UDim2.new(0, 0, 0, 22); dl.BackgroundTransparency = 1; dl.Font = Enum.Font.Gotham; dl.Text = descText or ""; dl.TextColor3 = Colors.TextMuted; dl.TextSize = 10; dl.TextXAlignment = Enum.TextXAlignment.Left; dl.Parent = tf
-    row.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = Colors.RowHover}):Play() end)
-    row.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = Colors.RowNormal}):Play() end)
+local function createBaseRow(parent, labelText, descText, rightReserve, indexSearch)
+    rightReserve = rightReserve or 130
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 36); row.BackgroundColor3 = Colors.RowNormal; row.BorderSizePixel = 0; row.Parent = parent
+    local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 8); pad.PaddingRight = UDim.new(0, 8); pad.Parent = row
+    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, -rightReserve, 1, 0); tf.BackgroundTransparency = 1; tf.Parent = row
+    local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0, 16); tl.Position = UDim2.new(0, 0, 0, 3); tl.BackgroundTransparency = 1; tl.Font = Enum.Font.GothamBold; tl.Text = labelText; tl.TextColor3 = Colors.TextWhite; tl.TextSize = 11; tl.TextXAlignment = Enum.TextXAlignment.Left; tl.TextTruncate = Enum.TextTruncate.AtEnd; tl.Parent = tf
+    local dl = Instance.new("TextLabel"); dl.Size = UDim2.new(1, 0, 0, 13); dl.Position = UDim2.new(0, 0, 0, 19); dl.BackgroundTransparency = 1; dl.Font = Enum.Font.Gotham; dl.Text = descText or ""; dl.TextColor3 = Colors.TextMuted; dl.TextSize = 9; dl.TextXAlignment = Enum.TextXAlignment.Left; dl.TextTruncate = Enum.TextTruncate.AtEnd; dl.Parent = tf
     if indexSearch ~= false then
         table.insert(rowSearchIndex, {frame = row, query = (labelText .. " " .. (descText or "")):lower()})
     end
@@ -503,9 +537,9 @@ local function createToggleRow(parent, labelText, descText, initialVal, callback
         callback = initialVal
         initialVal = false
     end
-    local row = createBaseRow(parent, labelText, descText, indexSearch)
+    local row = createBaseRow(parent, labelText, descText, 50, indexSearch)
     local state = initialVal or false
-    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 40, 0, 20); btn.Position = UDim2.new(1, -40, 0.5, -10); btn.BackgroundColor3 = state and Colors.PurpleAccent or Colors.ControlBg; btn.Text = ""; btn.BorderSizePixel = 0; btn.Parent = row
+    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 38, 0, 20); btn.Position = UDim2.new(1, -38, 0.5, -10); btn.BackgroundColor3 = state and Colors.PurpleAccent or Colors.ControlBg; btn.Text = ""; btn.BorderSizePixel = 0; btn.Parent = row
     Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
     local knob = Instance.new("Frame"); knob.Size = UDim2.new(0, 14, 0, 14); knob.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7); knob.BackgroundColor3 = Colors.TextWhite; knob.BorderSizePixel = 0; knob.Parent = btn
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
@@ -513,7 +547,7 @@ local function createToggleRow(parent, labelText, descText, initialVal, callback
         TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = state and Colors.PurpleAccent or Colors.ControlBg}):Play()
         TweenService:Create(knob, TweenInfo.new(0.15), {Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)}):Play()
     end
-    btn.MouseButton1Click:Connect(function()
+    btn.Activated:Connect(function()
         state = not state
         updateVisuals()
         if type(callback) == "function" then callback(state) end
@@ -521,36 +555,58 @@ local function createToggleRow(parent, labelText, descText, initialVal, callback
     return {frame = row, Set = function(val) state = val; updateVisuals() end, Get = function() return state end}
 end
 
+-- 滑块组件 (全面支持手机手指触摸滑动 Touch 与鼠标拖动)
 local function createSliderRow(parent, labelText, descText, minVal, maxVal, initialVal, isFloat, suffix, callback, indexSearch)
-    local row = createBaseRow(parent, labelText, descText, indexSearch)
+    local row = createBaseRow(parent, labelText, descText, 140, indexSearch)
     local currentVal = initialVal or minVal; suffix = suffix or ""
-    local container = Instance.new("Frame"); container.Size = UDim2.new(0, 180, 0, 24); container.Position = UDim2.new(1, -180, 0.5, -12); container.BackgroundTransparency = 1; container.Parent = row
-    local valLabel = Instance.new("TextLabel"); valLabel.Size = UDim2.new(0, 68, 1, 0); valLabel.Position = UDim2.new(1, -68, 0, 0); valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextColor3 = Colors.PurplePrimary; valLabel.TextSize = 11; valLabel.TextXAlignment = Enum.TextXAlignment.Right; valLabel.Parent = container
-    valLabel.Text = isFloat and string.format("%.2f", currentVal)..suffix or tostring(math.floor(currentVal))..suffix
-    local track = Instance.new("Frame"); track.Size = UDim2.new(1, -74, 0, 6); track.Position = UDim2.new(0, 0, 0.5, -3); track.BackgroundColor3 = Colors.ControlBg; track.BorderSizePixel = 0; track.Parent = container
+    local container = Instance.new("Frame"); container.Size = UDim2.new(0, 132, 0, 26); container.Position = UDim2.new(1, -132, 0.5, -13); container.BackgroundTransparency = 1; container.Parent = row
+    local valLabel = Instance.new("TextLabel"); valLabel.Size = UDim2.new(0, 52, 1, 0); valLabel.Position = UDim2.new(1, -52, 0, 0); valLabel.BackgroundTransparency = 1; valLabel.Font = Enum.Font.GothamBold; valLabel.TextColor3 = Colors.PurplePrimary; valLabel.TextSize = 10; valLabel.TextXAlignment = Enum.TextXAlignment.Right; valLabel.Parent = container
+    valLabel.Text = isFloat and string.format("%.1f", currentVal)..suffix or tostring(math.floor(currentVal))..suffix
+
+    -- 扩大触控区域方便手指滑动
+    local touchHitbox = Instance.new("TextButton"); touchHitbox.Size = UDim2.new(1, -56, 1, 0); touchHitbox.Position = UDim2.new(0, 0, 0, 0); touchHitbox.BackgroundTransparency = 1; touchHitbox.Text = ""; touchHitbox.Parent = container
+    local track = Instance.new("Frame"); track.Size = UDim2.new(1, 0, 0, 6); track.Position = UDim2.new(0, 0, 0.5, -3); track.BackgroundColor3 = Colors.ControlBg; track.BorderSizePixel = 0; track.Parent = touchHitbox
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
     local pct = math.clamp((currentVal - minVal) / (maxVal - minVal), 0, 1)
     local fill = Instance.new("Frame"); fill.Size = UDim2.new(pct, 0, 1, 0); fill.BackgroundColor3 = Colors.PurpleAccent; fill.BorderSizePixel = 0; fill.Parent = track
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
     local sliding = false
     local function updateFromX(x)
-        local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+        local absX = track.AbsolutePosition.X
+        local absW = math.max(1, track.AbsoluteSize.X)
+        local rel = math.clamp((x - absX) / absW, 0, 1)
         local val = minVal + (maxVal - minVal) * rel
         if not isFloat then val = math.floor(val + 0.5) end
         currentVal = val; fill.Size = UDim2.new(rel, 0, 1, 0)
-        valLabel.Text = isFloat and string.format("%.2f", val)..suffix or tostring(val)..suffix
+        valLabel.Text = isFloat and string.format("%.1f", val)..suffix or tostring(val)..suffix
         if type(callback) == "function" then callback(val) end
     end
-    track.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true; updateFromX(input.Position.X) end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
-    table.insert(activeConnections, UserInputService.InputChanged:Connect(function(input) if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then updateFromX(input.Position.X) end end))
+
+    touchHitbox.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sliding = true
+            updateFromX(input.Position.X)
+        end
+    end)
+    table.insert(activeConnections, UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sliding = false
+        end
+    end))
+    table.insert(activeConnections, UserInputService.InputChanged:Connect(function(input)
+        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateFromX(input.Position.X)
+        end
+    end))
+
     return {
         frame = row,
         Set = function(val)
             currentVal = math.clamp(val, minVal, maxVal)
             local p2 = (currentVal - minVal) / (maxVal - minVal)
             fill.Size = UDim2.new(p2, 0, 1, 0)
-            valLabel.Text = isFloat and string.format("%.2f", currentVal)..suffix or tostring(math.floor(currentVal))..suffix
+            valLabel.Text = isFloat and string.format("%.1f", currentVal)..suffix or tostring(math.floor(currentVal))..suffix
         end
     }
 end
@@ -562,45 +618,41 @@ local function createDropdownRow(parent, labelText, descText, options, initialVa
         initialVal = options[1]
     end
     local selected = initialVal or options[1]
-    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 42); row.AutomaticSize = Enum.AutomaticSize.Y; row.BackgroundColor3 = Colors.RowNormal; row.BorderSizePixel = 0; row.ClipsDescendants = true; row.Parent = parent
-    local rl = Instance.new("UIListLayout"); rl.SortOrder = Enum.SortOrder.LayoutOrder; rl.Padding = UDim.new(0, 4); rl.Parent = row
-    local header = Instance.new("Frame"); header.Size = UDim2.new(1, 0, 0, 42); header.BackgroundTransparency = 1; header.Parent = row
-    local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10); pad.Parent = header
-    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, -145, 1, 0); tf.BackgroundTransparency = 1; tf.Parent = header
-    local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0, 18); tl.Position = UDim2.new(0, 0, 0, 4); tl.BackgroundTransparency = 1; tl.Font = Enum.Font.GothamBold; tl.Text = labelText; tl.TextColor3 = Colors.TextWhite; tl.TextSize = 12; tl.TextXAlignment = Enum.TextXAlignment.Left; tl.Parent = tf
-    local dl = Instance.new("TextLabel"); dl.Size = UDim2.new(1, 0, 0, 14); dl.Position = UDim2.new(0, 0, 0, 22); dl.BackgroundTransparency = 1; dl.Font = Enum.Font.Gotham; dl.Text = descText or ""; dl.TextColor3 = Colors.TextMuted; dl.TextSize = 10; dl.TextXAlignment = Enum.TextXAlignment.Left; dl.Parent = tf
-    local ddBtn = Instance.new("TextButton"); ddBtn.Size = UDim2.new(0, 130, 0, 24); ddBtn.Position = UDim2.new(1, -130, 0.5, -12); ddBtn.BackgroundColor3 = Colors.ControlBg; ddBtn.Font = Enum.Font.GothamBold; ddBtn.Text = tostring(selected) .. "  v"; ddBtn.TextColor3 = Colors.PurplePrimary; ddBtn.TextSize = 11; ddBtn.BorderSizePixel = 0; ddBtn.Parent = header
+    local row = Instance.new("Frame"); row.Size = UDim2.new(1, 0, 0, 36); row.AutomaticSize = Enum.AutomaticSize.Y; row.BackgroundColor3 = Colors.RowNormal; row.BorderSizePixel = 0; row.ClipsDescendants = true; row.Parent = parent
+    local rl = Instance.new("UIListLayout"); rl.SortOrder = Enum.SortOrder.LayoutOrder; rl.Padding = UDim.new(0, 2); rl.Parent = row
+    local header = Instance.new("Frame"); header.Size = UDim2.new(1, 0, 0, 36); header.BackgroundTransparency = 1; header.Parent = row
+    local pad = Instance.new("UIPadding"); pad.PaddingLeft = UDim.new(0, 8); pad.PaddingRight = UDim.new(0, 8); pad.Parent = header
+    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1, -118, 1, 0); tf.BackgroundTransparency = 1; tf.Parent = header
+    local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0, 16); tl.Position = UDim2.new(0, 0, 0, 3); tl.BackgroundTransparency = 1; tl.Font = Enum.Font.GothamBold; tl.Text = labelText; tl.TextColor3 = Colors.TextWhite; tl.TextSize = 11; tl.TextXAlignment = Enum.TextXAlignment.Left; tl.Parent = tf
+    local dl = Instance.new("TextLabel"); dl.Size = UDim2.new(1, 0, 0, 13); dl.Position = UDim2.new(0, 0, 0, 19); dl.BackgroundTransparency = 1; dl.Font = Enum.Font.Gotham; dl.Text = descText or ""; dl.TextColor3 = Colors.TextMuted; dl.TextSize = 9; dl.TextXAlignment = Enum.TextXAlignment.Left; dl.Parent = tf
+    local ddBtn = Instance.new("TextButton"); ddBtn.Size = UDim2.new(0, 110, 0, 22); ddBtn.Position = UDim2.new(1, -110, 0.5, -11); ddBtn.BackgroundColor3 = Colors.ControlBg; ddBtn.Font = Enum.Font.GothamBold; ddBtn.Text = tostring(selected) .. " v"; ddBtn.TextColor3 = Colors.PurplePrimary; ddBtn.TextSize = 10; ddBtn.TextTruncate = Enum.TextTruncate.AtEnd; ddBtn.BorderSizePixel = 0; ddBtn.Parent = header
     Instance.new("UICorner", ddBtn).CornerRadius = UDim.new(0, 4)
     local optC = Instance.new("Frame"); optC.Size = UDim2.new(1, 0, 0, 0); optC.AutomaticSize = Enum.AutomaticSize.Y; optC.BackgroundTransparency = 1; optC.Visible = false; optC.Parent = row
-    do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 10); p.PaddingRight = UDim.new(0, 10); p.PaddingBottom = UDim.new(0, 8); p.Parent = optC end
+    do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 8); p.PaddingRight = UDim.new(0, 8); p.PaddingBottom = UDim.new(0, 6); p.Parent = optC end
     Instance.new("UIListLayout", optC).SortOrder = Enum.SortOrder.LayoutOrder
     local optButtons = {}
     local function populate(opts)
         for _, c in ipairs(optC:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
         table.clear(optButtons)
         for _, opt in ipairs(opts) do
-            local ob = Instance.new("TextButton"); ob.Size = UDim2.new(1, 0, 0, 26); ob.BackgroundColor3 = (opt == selected) and Colors.DropdownSelected or Colors.InputBg; ob.Font = Enum.Font.Gotham; ob.Text = (opt == selected and "> " or "   ") .. tostring(opt); ob.TextColor3 = (opt == selected) and Colors.PurplePrimary or Colors.TextWhite; ob.TextSize = 11; ob.TextXAlignment = Enum.TextXAlignment.Left; ob.BorderSizePixel = 0; ob.Parent = optC
+            local ob = Instance.new("TextButton"); ob.Size = UDim2.new(1, 0, 0, 24); ob.BackgroundColor3 = (opt == selected) and Colors.DropdownSelected or Colors.InputBg; ob.Font = Enum.Font.Gotham; ob.Text = (opt == selected and "> " or "   ") .. tostring(opt); ob.TextColor3 = (opt == selected) and Colors.PurplePrimary or Colors.TextWhite; ob.TextSize = 10; ob.TextXAlignment = Enum.TextXAlignment.Left; ob.BorderSizePixel = 0; ob.Parent = optC
             Instance.new("UICorner", ob).CornerRadius = UDim.new(0, 4)
-            do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 10); p.Parent = ob end
+            do local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0, 8); p.Parent = ob end
             optButtons[opt] = ob
-            ob.MouseEnter:Connect(function() if opt ~= selected then TweenService:Create(ob, TweenInfo.new(0.15), {BackgroundColor3 = Colors.RowHover}):Play() end end)
-            ob.MouseLeave:Connect(function() if opt ~= selected then TweenService:Create(ob, TweenInfo.new(0.15), {BackgroundColor3 = Colors.InputBg}):Play() end end)
-            ob.MouseButton1Click:Connect(function()
-                selected = opt; ddBtn.Text = tostring(opt) .. "  v"; optC.Visible = false
+            ob.Activated:Connect(function()
+                selected = opt; ddBtn.Text = tostring(opt) .. " v"; optC.Visible = false
                 for oN, b in pairs(optButtons) do b.BackgroundColor3 = (oN == opt) and Colors.DropdownSelected or Colors.InputBg; b.TextColor3 = (oN == opt) and Colors.PurplePrimary or Colors.TextWhite; b.Text = (oN == opt and "> " or "   ") .. tostring(oN) end
                 if type(callback) == "function" then callback(opt) end
             end)
         end
     end
     populate(options)
-    ddBtn.MouseButton1Click:Connect(function() optC.Visible = not optC.Visible; ddBtn.Text = tostring(selected) .. (optC.Visible and "  ^" or "  v") end)
-    header.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = Colors.RowHover}):Play() end)
-    header.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = Colors.RowNormal}):Play() end)
+    ddBtn.Activated:Connect(function() optC.Visible = not optC.Visible; ddBtn.Text = tostring(selected) .. (optC.Visible and " ^" or " v") end)
     if indexSearch ~= false then table.insert(rowSearchIndex, {frame = row, query = (labelText .. " " .. (descText or "")):lower()}) end
     return {
         frame = row,
         Set = function(opt)
-            selected = opt; ddBtn.Text = tostring(opt) .. "  v"
+            selected = opt; ddBtn.Text = tostring(opt) .. " v"
             for oN, b in pairs(optButtons) do b.BackgroundColor3 = (oN == opt) and Colors.DropdownSelected or Colors.InputBg; b.TextColor3 = (oN == opt) and Colors.PurplePrimary or Colors.TextWhite; b.Text = (oN == opt and "> " or "   ") .. tostring(oN) end
         end,
         Get = function() return selected end
@@ -619,20 +671,18 @@ local function createButtonRow(parent, labelText, descText, btnText, callback, i
         btnText = descText
         descText = ""
     end
-    local row = createBaseRow(parent, labelText, descText, indexSearch)
-    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 90, 0, 24); btn.Position = UDim2.new(1, -90, 0.5, -12); btn.BackgroundColor3 = Colors.ControlBg; btn.Font = Enum.Font.GothamBold; btn.Text = btnText or "执行"; btn.TextColor3 = Colors.PurplePrimary; btn.TextSize = 11; btn.BorderSizePixel = 0; btn.Parent = row
+    local row = createBaseRow(parent, labelText, descText, 82, indexSearch)
+    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0, 74, 0, 22); btn.Position = UDim2.new(1, -74, 0.5, -11); btn.BackgroundColor3 = Colors.ControlBg; btn.Font = Enum.Font.GothamBold; btn.Text = btnText or "执行"; btn.TextColor3 = Colors.PurplePrimary; btn.TextSize = 10; btn.BorderSizePixel = 0; btn.Parent = row
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Colors.PurpleDark, TextColor3 = Colors.TextWhite}):Play() end)
-    btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Colors.ControlBg, TextColor3 = Colors.PurplePrimary}):Play() end)
-    btn.MouseButton1Click:Connect(function()
+    btn.Activated:Connect(function()
         if type(callback) == "function" then pcall(callback) end
     end)
     return btn
 end
 
 local function createInfoRow(parent, labelText, valueText, indexSearch)
-    local row = createBaseRow(parent, labelText, "", indexSearch)
-    local vl = Instance.new("TextLabel"); vl.Size = UDim2.new(0, 140, 1, 0); vl.Position = UDim2.new(1, -140, 0, 0); vl.BackgroundTransparency = 1; vl.Font = Enum.Font.GothamBold; vl.Text = valueText; vl.TextColor3 = Colors.PurplePrimary; vl.TextSize = 11; vl.TextXAlignment = Enum.TextXAlignment.Right; vl.Parent = row
+    local row = createBaseRow(parent, labelText, "", 120, indexSearch)
+    local vl = Instance.new("TextLabel"); vl.Size = UDim2.new(0, 115, 1, 0); vl.Position = UDim2.new(1, -115, 0, 0); vl.BackgroundTransparency = 1; vl.Font = Enum.Font.GothamBold; vl.Text = valueText; vl.TextColor3 = Colors.PurplePrimary; vl.TextSize = 10; vl.TextXAlignment = Enum.TextXAlignment.Right; vl.Parent = row
     return {frame = row, Set = function(nv) vl.Text = nv end}
 end
 
@@ -679,54 +729,47 @@ local isSellingProcess = false
 -- [选项卡 1] 钓鱼自动化、出售与防挂机
 ----------------------------------------------------------------------
 
-createCategoryHeader(tabFishing, "实时账户与钓鱼统计")
-local statsCard = createCardGroup(tabFishing)
-local infoEquippedRod = createInfoRow(statsCard, "已装备鱼竿", "检测中...")
-local infoEquippedBait = createInfoRow(statsCard, "已装备鱼饵", "检测中...")
-local infoFishCaught = createInfoRow(statsCard, "总捕获鱼数", "0")
-local infoCash = createInfoRow(statsCard, "当前现金", "$0")
-
 createCategoryHeader(tabFishing, "核心钓鱼自动化")
 local fishCard = createCardGroup(tabFishing)
 createToggleRow(fishCard, "自动抛竿", "自动开始钓鱼并抛竿", Config.AutoCast, function(v) Config.AutoCast = v end)
-createSliderRow(fishCard, "抛竿延迟", "每次抛竿间隔频率", 0.5, 5.0, Config.CastDelay, true, "秒", function(v) Config.CastDelay = v end)
-createToggleRow(fishCard, "锚定条(小游戏锁定)", "自动居中小游戏条，确保100%捕获", Config.AnchorBar, function(v) Config.AnchorBar = v end)
-createToggleRow(fishCard, "自动猛击/暴击", "提示时自动点击猛击按钮打出暴击伤害", Config.AutoSlam, function(v) Config.AutoSlam = v end)
+createSliderRow(fishCard, "抛竿延迟", "每次抛竿间隔", 0.5, 5.0, Config.CastDelay, true, "秒", function(v) Config.CastDelay = v end)
+createToggleRow(fishCard, "锚定条(小游戏锁定)", "自动居中小游戏条，100%捕获", Config.AnchorBar, function(v) Config.AnchorBar = v end)
+createToggleRow(fishCard, "自动猛击/暴击", "提示时自动点击猛击打出暴击", Config.AutoSlam, function(v) Config.AutoSlam = v end)
 createToggleRow(fishCard, "自动充能耐久", "提示时自动充能鱼线耐久", Config.AutoCharge, function(v) Config.AutoCharge = v end)
-createToggleRow(fishCard, "自动技能(爆发DPS)", "收线时自动释放鱼竿与小游戏技能", Config.AutoSkills, function(v) Config.AutoSkills = v end)
+createToggleRow(fishCard, "自动技能(爆发DPS)", "收线时自动释放鱼竿技能", Config.AutoSkills, function(v) Config.AutoSkills = v end)
 
-createCategoryHeader(tabFishing, "经济与出售 (含0~60分钟定时优化)")
+createCategoryHeader(tabFishing, "经济与出售 (含0~60分钟定时)")
 local sellCard = createCardGroup(tabFishing)
 
--- 原有快速自动卖鱼 (按秒/满包)
-createToggleRow(sellCard, "自动卖鱼 (原有模式)", "背包满或按秒级间隔自动出售背包中的鱼", Config.AutoSell, function(v) Config.AutoSell = v end)
-createSliderRow(sellCard, "秒级出售间隔", "原有自动卖鱼触发频率(秒)", 10, 300, Config.SellInterval, false, "秒", function(v) Config.SellInterval = v end)
-
 -- 新增：0~60分钟定时自动卖鱼
-createToggleRow(sellCard, "开启分钟级定时卖鱼", "按下方设定的分钟数(0~60分钟)周期自动卖鱼", Config.TimedSellEnabled, function(v)
+createToggleRow(sellCard, "开启分钟级定时卖鱼", "按设定的分钟数(0~60分)周期自动卖鱼", Config.TimedSellEnabled, function(v)
     Config.TimedSellEnabled = v
     lastTimedSellTick = tick()
     if v and Config.TimedSellMinutes > 0 then
-        ShowNotification("定时卖鱼", string.format("已开启！每 %d 分钟自动卖鱼一次。", Config.TimedSellMinutes), "SUCCESS")
+        ShowNotification("定时卖鱼", string.format("已开启！每 %d 分钟自动卖鱼。", Config.TimedSellMinutes), "SUCCESS")
     elseif v and Config.TimedSellMinutes == 0 then
-        ShowNotification("定时卖鱼", "当前时间设为 0 分钟，请拖动滑块选择 1~60 分钟。", "WARN")
+        ShowNotification("定时卖鱼", "请拖动滑块选择 1~60 分钟。", "WARN")
     else
-        ShowNotification("定时卖鱼", "已关闭分钟级定时卖鱼。", "WARN")
+        ShowNotification("定时卖鱼", "已关闭分钟定时卖鱼。", "WARN")
     end
 end)
 
-createSliderRow(sellCard, "定时卖鱼时间 (0~60分钟)", "选择每隔多少分钟自动卖鱼一次(例如30分钟)", 0, 60, Config.TimedSellMinutes, false, "分钟", function(v)
+createSliderRow(sellCard, "定时卖鱼时间(0~60分)", "每隔多少分钟自动卖鱼(如30分)", 0, 60, Config.TimedSellMinutes, false, "分", function(v)
     Config.TimedSellMinutes = v
     lastTimedSellTick = tick()
 end)
 
-createToggleRow(sellCard, "卖鱼时传送娜娜并返回原位", "到时间后自动传送到娜娜处卖鱼，完成后传回原钓鱼点", Config.SellTpAndReturn, function(v)
+createToggleRow(sellCard, "卖鱼传送娜娜并返回原位", "到时间传去娜娜卖鱼后传回原钓点", Config.SellTpAndReturn, function(v)
     Config.SellTpAndReturn = v
 end)
 
 local infoTimedSellCountdown = createInfoRow(sellCard, "距离下次定时卖鱼", "未开启")
 
-createButtonRow(sellCard, "立即传送到娜娜并卖鱼", "手动传送至卖鱼NPC娜娜处并清空出售背包", "立即出售", function()
+-- 原有快速自动卖鱼 (按秒/满包)
+createToggleRow(sellCard, "自动卖鱼(原有秒级模式)", "背包满或按秒级间隔出售", Config.AutoSell, function(v) Config.AutoSell = v end)
+createSliderRow(sellCard, "秒级出售间隔", "原有秒级卖鱼频率", 10, 300, Config.SellInterval, false, "秒", function(v) Config.SellInterval = v end)
+
+createButtonRow(sellCard, "立即传送到娜娜并卖鱼", "手动传去娜娜处清空出售背包", "立即出售", function()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if root then
@@ -740,26 +783,31 @@ createButtonRow(sellCard, "立即传送到娜娜并卖鱼", "手动传送至卖�
 end)
 
 local fishList = {"Colossal Tigerfish", "Heavenpiercer Turtle", "Golden Guardian Fish", "Crimson Electric Eel", "Frost Kingfish", "Ascended Perch", "Primordial Kunfish Overlord", "Warbringer Shark", "Mountain Fish", "Tiger Mirefish", "Mirage Lanternfish", "Octoparasitic Fish"}
-createToggleRow(sellCard, "自动收藏保护鱼", "保护选中的目标鱼不被自动出售", Config.AutoFavouriteFish, function(v) Config.AutoFavouriteFish = v end)
+createToggleRow(sellCard, "自动收藏保护鱼", "保护选中的目标鱼不被出售", Config.AutoFavouriteFish, function(v) Config.AutoFavouriteFish = v end)
 createDropdownRow(sellCard, "收藏保护目标", "选择要保护的珍稀鱼类", fishList, Config.FavouriteFishName, function(v) Config.FavouriteFishName = v end)
-createToggleRow(sellCard, "材料收集保护", "自动锁定制作材料鱼，防止误卖", Config.MaterialFarming, function(v) Config.MaterialFarming = v end)
+createToggleRow(sellCard, "材料收集保护", "自动锁定制作材料鱼防误卖", Config.MaterialFarming, function(v) Config.MaterialFarming = v end)
 
 createCategoryHeader(tabFishing, "防挂机与稳定性")
 local afkCard = createCardGroup(tabFishing)
-createToggleRow(afkCard, "防挂机 (Anti-AFK)", "防止Roblox 20分钟无操作闲置踢出", Config.AntiAFK, function(v)
+createToggleRow(afkCard, "防挂机 (Anti-AFK)", "防止Roblox 20分钟无操作踢出", Config.AntiAFK, function(v)
     Config.AntiAFK = v
     ShowNotification("防挂机", v and "已开启防挂机保护！" or "已关闭防挂机保护。", v and "SUCCESS" or "WARN")
 end)
-createToggleRow(afkCard, "被踢/断线自动重连", "检测到掉线或被踢时自动重新加入服务器", Config.AutoRejoin, function(v)
+createToggleRow(afkCard, "被踢/断线自动重连", "掉线或被踢时自动重新进服", Config.AutoRejoin, function(v)
     Config.AutoRejoin = v
     ShowNotification("自动重连", v and "已开启断线自动重连！" or "已关闭断线自动重连。", v and "SUCCESS" or "WARN")
 end)
 
-createCategoryHeader(tabFishing, "智能自动装备")
+createCategoryHeader(tabFishing, "智能自动装备与统计")
 local equipCard = createCardGroup(tabFishing)
-createToggleRow(equipCard, "自动装备最佳鱼饵", "自动装备背包中运气加成最高的鱼饵", Config.AutoEquipBestBait, function(v) Config.AutoEquipBestBait = v end)
-createToggleRow(equipCard, "自动装备最佳鱼竿", "自动装备已拥有的最高威力鱼竿", Config.AutoEquipBestRod, function(v) Config.AutoEquipBestRod = v end)
-createToggleRow(equipCard, "自动装备最佳宝珠", "自动装备最高品质精华宝珠", Config.AutoEquipBestOrb, function(v) Config.AutoEquipBestOrb = v end)
+local infoEquippedRod = createInfoRow(equipCard, "已装备鱼竿", "检测中...")
+local infoEquippedBait = createInfoRow(equipCard, "已装备鱼饵", "检测中...")
+local infoFishCaught = createInfoRow(equipCard, "总捕获鱼数", "0")
+local infoCash = createInfoRow(equipCard, "当前现金", "$0")
+
+createToggleRow(equipCard, "自动装备最佳鱼饵", "自动装备运气最高的鱼饵", Config.AutoEquipBestBait, function(v) Config.AutoEquipBestBait = v end)
+createToggleRow(equipCard, "自动装备最佳鱼竿", "自动装备最高威力鱼竿", Config.AutoEquipBestRod, function(v) Config.AutoEquipBestRod = v end)
+createToggleRow(equipCard, "自动装备最佳宝珠", "自动装备最高品质宝珠", Config.AutoEquipBestOrb, function(v) Config.AutoEquipBestOrb = v end)
 
 local rodNameList = {}
 for _, r in ipairs(allRods) do table.insert(rodNameList, r.name) end
@@ -818,7 +866,7 @@ end)
 createCategoryHeader(tabTeleports, "NPC与核心功能点")
 local npcTpCard = createCardGroup(tabTeleports)
 
-createButtonRow(npcTpCard, "娜娜 (卖鱼NPC)", "传送到起始岛娜娜身边直接卖鱼", "传送", function()
+createButtonRow(npcTpCard, "娜娜 (卖鱼NPC)", "传送到起始岛娜娜身边卖鱼", "传送", function()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if root then
@@ -878,7 +926,7 @@ local rodDealers = {
 }
 
 for _, rd in ipairs(rodDealers) do
-    createButtonRow(rodDealerCard, rd.name, "直接传送到对应岛屿鱼竿商人", "传送", function()
+    createButtonRow(rodDealerCard, rd.name, "传送到对应鱼竿商人", "传送", function()
         local char = LocalPlayer.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
         if root then
@@ -912,25 +960,36 @@ for _, sr in ipairs(secretRods) do
 end
 
 ----------------------------------------------------------------------
--- [选项卡 3] 设置与配置管理
+-- [选项卡 3] 设置与手机屏幕缩放
 ----------------------------------------------------------------------
+
+createCategoryHeader(tabSettings, "手机界面大小调节")
+local uiCard = createCardGroup(tabSettings)
+createSliderRow(uiCard, "窗口缩放比例", "觉得窗口太大可往左拉小(50%~120%)", 50, 120, Config.UIScalePercent, false, "%", function(v)
+    Config.UIScalePercent = v
+    ApplyUIScale()
+end)
+createButtonRow(uiCard, "窗口位置居中复位", "如果不小心把窗口拖出屏幕可点此复位", "居中", function()
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+end)
 
 createCategoryHeader(tabSettings, "配置文件管理")
 local profCard = createCardGroup(tabSettings)
 
-createButtonRow(profCard, "保存配置", "将当前设置保存到本地JSON文件", "保存", function()
+createButtonRow(profCard, "保存配置", "将当前设置保存到本地JSON", "保存", function()
     if SaveProfile() then
-        ShowNotification("配置", "配置 'default.json' 保存成功！", "SUCCESS")
+        ShowNotification("配置", "配置保存成功！", "SUCCESS")
     else
         ShowNotification("配置", "保存配置失败。", "ERROR")
     end
 end)
 
-createButtonRow(profCard, "加载配置", "从本地JSON文件读取保存的设置", "读取", function()
+createButtonRow(profCard, "加载配置", "从本地JSON读取保存的设置", "读取", function()
     if LoadProfile() then
-        ShowNotification("配置", "配置 'default.json' 读取成功！", "SUCCESS")
+        ApplyUIScale()
+        ShowNotification("配置", "配置读取成功！", "SUCCESS")
     else
-        ShowNotification("配置", "未找到已保存的配置文件。", "WARN")
+        ShowNotification("配置", "未找到已保存的配置。", "WARN")
     end
 end)
 
@@ -941,7 +1000,7 @@ local credCard = createCardGroup(tabSettings)
 createButtonRow(credCard, "手动重新加入当前服务器", "立即重连当前服务器", "重连", function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
-createButtonRow(credCard, "卸载脚本", "安全退出脚本并移除所有界面与监听器", "卸载", UnloadScript)
+createButtonRow(credCard, "卸载脚本", "安全退出并移除所有界面与监听", "卸载", UnloadScript)
 
 ----------------------------------------------------------------------
 -- 核心逻辑主循环
@@ -1112,7 +1171,7 @@ table.insert(activeConnections, RunService.Heartbeat:Connect(function(dt)
                     ExecuteSellRoutine(
                         pData,
                         Config.SellTpAndReturn,
-                        string.format("已到达 %d 分钟定时，自动完成卖鱼！", Config.TimedSellMinutes)
+                        string.format("已到 %d 分钟，自动完成卖鱼！", Config.TimedSellMinutes)
                     )
                     return
                 end
@@ -1300,7 +1359,7 @@ pcall(function()
     end))
 end)
 
--- 快捷键监听
+-- 快捷键监听 (电脑端备用)
 table.insert(activeConnections, UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Config.UIKeybind then
@@ -1310,4 +1369,4 @@ table.insert(activeConnections, UserInputService.InputBegan:Connect(function(inp
     end
 end))
 
-ShowNotification("重型钓鱼", "精简版已启动(已支持0~60分钟定时卖鱼)！按 [R-CTRL] 切换菜单。", "SUCCESS", 5)
+ShowNotification("重型钓鱼", "手机优化版已就绪！点左上角【收/钓】悬浮球可随时收起菜单。", "SUCCESS", 4)
