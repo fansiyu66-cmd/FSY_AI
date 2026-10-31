@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDENTICAL 脚本流畅度优化清单</title>
+<style>
+  :root {
+    --bg: #0d0a14;
+    --bg2: #141020;
+    --card: #1a1428;
+    --card2: #201834;
+    --border: #2d2244;
+    --border2: #3d3060;
+    --purple: #d8a0ff;
+    --purple-accent: #c084fc;
+    --purple-muted: #9a8fb0;
+    --text: #f5f2ff;
+    --text-sub: #a896c8;
+    --text-muted: #82739b;
+    --green: #34d399;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* 头部 */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid var(--border);
+    position: relative;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--purple-accent), transparent);
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--purple), var(--purple-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  header p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* 顶部说明卡 */
+  .intro {
+    background: linear-gradient(135deg, var(--card), var(--card2));
+    border: 1px solid var(--border2);
+    border-left: 4px solid var(--purple-accent);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 30px;
+    color: var(--text-sub);
+    font-size: 14px;
+  }
+  .intro strong {
+    color: var(--purple);
+  }
+
+  /* 优先级表 */
+  .priority-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 40px;
+    font-size: 13px;
+    background: var(--card);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .priority-table th {
+    background: var(--card2);
+    color: var(--purple);
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border2);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .priority-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-sub);
+  }
+  .priority-table tr:last-child td { border-bottom: none; }
+  .priority-table tr:hover td { background: var(--card2); }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge-p0 { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.4); }
+  .badge-p1 { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.4); }
+  .badge-p2 { background: rgba(250,204,21,0.15); color: var(--yellow); border: 1px solid rgba(250,204,21,0.4); }
+  .badge-p3 { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.4); }
+
+  /* 优化项卡片 */
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--purple);
+    margin: 40px 0 20px;
+    padding-left: 12px;
+    border-left: 3px solid var(--purple-accent);
+  }
+  .opt-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+  }
+  .opt-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-1px);
+  }
+  .opt-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .opt-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--purple-accent), var(--purple));
+    color: #14082a;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .opt-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+    padding-top: 4px;
+  }
+  .opt-card .label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+  .label-problem { background: rgba(248,113,113,0.12); color: var(--red); }
+  .label-suggest { background: rgba(52,211,153,0.12); color: var(--green); }
+
+  .opt-body {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    padding-left: 46px;
+  }
+  .opt-body p { margin-bottom: 10px; }
+  .opt-body p:last-child { margin-bottom: 0; }
+
+  /* 代码块 */
+  pre {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0;
+    font-family: "SF Mono", "Consolas", "Monaco", monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #cbb8e8;
+  }
+  code {
+    font-family: "SF Mono", "Consolas", "Monaco", monospace;
+    font-size: 12.5px;
+    background: rgba(192,132,252,0.12);
+    color: var(--purple);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+  }
+  .kw { color: #ff79c6; }
+  .str { color: #f1fa8c; }
+  .cmt { color: #6272a4; font-style: italic; }
+  .fn { color: #50fa7b; }
+  .num { color: #bd93f9; }
+  .op { color: #ff79c6; }
+
+  /* 结尾 */
+  .conclusion {
+    background: linear-gradient(135deg, rgba(216,160,255,0.08), rgba(192,132,252,0.04));
+    border: 1px solid var(--border2);
+    border-left: 4px solid var(--purple);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-top: 40px;
+    font-size: 14px;
+    color: var(--text-sub);
+  }
+  .conclusion strong { color: var(--purple); }
+  .conclusion .big {
+    display: block;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  /* 目录 */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 30px;
+  }
+  .toc-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--purple-muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 6px 20px;
+  }
+  .toc a {
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 4px 0;
+    display: block;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--purple); }
+
+  @media (max-width: 640px) {
+    body { padding: 20px 12px; }
+    header h1 { font-size: 22px; }
+    .opt-card { padding: 18px 16px; }
+    .opt-body { padding-left: 0; margin-top: 8px; }
+    .priority-table { font-size: 12px; }
+    .priority-table th, .priority-table td { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>IDENTICAL 脚本流畅度优化清单</h1>
+    <p>36max1.lua · 帧率与卡顿专项分析 · 共 20 项优化建议</p>
+  </header>
+
+  <div class="intro">
+    这份脚本的瓶颈<strong>不在算法复杂度</strong>，而在两个典型的性能反模式：
+    <br>① <strong>同一件事被多条路径重复做</strong>（三条钓鱼按钮恢复逻辑、两条 RestoreMobileFishingButtonUI、多个技能扫描循环）；
+    <br>② <strong>每帧都做属性查找 / 字符串拼接 / 跨 C++ 边界调用</strong>（GetAttribute、Config["ESP_"..cat]、FindFirstChild 链）。
+    <br>下面的优化按 <strong>ROI（投入产出比）</strong> 从高到低排序。
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">目录</div>
+    <div class="toc-grid">
+      <a href="#p1">01 · 钓鱼按钮三重冗余守护</a>
+      <a href="#p2">02 · GetMobileFishingButton 缓存失效</a>
+      <a href="#p3">03 · Heartbeat 中的 GetAttribute</a>
+      <a href="#p4">04 · DoesInstanceMatchNPCSpec 复杂度</a>
+      <a href="#p5">05 · RefreshAllESPNow 字符串拼接</a>
+      <a href="#p6">06 · GetCachedSkillButton 全量扫描</a>
+      <a href="#p7">07 · IsCharacterHoldingFishingRod 每帧</a>
+      <a href="#p8">08 · TryFavoriteProtectedFish 全背包</a>
+      <a href="#p9">09 · 卖鱼循环重复校验</a>
+      <a href="#p10">10 · DismissStuckPrompts 重复调用</a>
+      <a href="#p11">11 · BindVerticalCanvas 信号过多</a>
+      <a href="#p12">12 · Tween 对象滥用</a>
+      <a href="#p13">13 · ShowNotification Tween 抖动</a>
+      <a href="#p14">14 · while 循环无条件常驻</a>
+      <a href="#p15">15 · RefreshGuiAndDataRefs FindFirstChild</a>
+      <a href="#p16">16 · IsDialogueUIOpen 兜底全扫</a>
+      <a href="#p17">17 · 鱼名与通配符缓存策略</a>
+      <a href="#p18">18 · Hook 中的字符串 find</a>
+      <a href="#p19">19 · InvokeServer yield 阻塞</a>
+      <a href="#p20">20 · ActiveConnections 无限增长</a>
+    </div>
+  </div>
+
+  <div class="section-title">优先级总览</div>
+  <table class="priority-table">
+    <thead>
+      <tr>
+        <th>优先级</th>
+        <th>优化项</th>
+        <th>预计收益</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge badge-p0">P0</span></td><td>删除 RenderStepped / BindToRenderStep 重复钓鱼按钮守护</td><td>每帧 -2~4 次属性写入</td></tr>
+      <tr><td><span class="badge badge-p0">P0</span></td><td>放宽 GetMobileFishingButton 缓存命中条件</td><td>消除随机全屏扫描</td></tr>
+      <tr><td><span class="badge badge-p1">P1</span></td><td>char:GetAttribute 全部事件化</td><td>每帧 -4 次 C++ 调用</td></tr>
+      <tr><td><span class="badge badge-p1">P1</span></td><td>DoesInstanceMatchNPCSpec 反向索引 + summary 浅层</td><td>雷达扫描 5x~10x 提速</td></tr>
+      <tr><td><span class="badge badge-p2">P2</span></td><td>TryFavoriteProtectedFish 改增量处理</td><td>每 3s 从 O(背包) → O(new)</td></tr>
+      <tr><td><span class="badge badge-p2">P2</span></td><td>Skill 按钮扫描增量维护</td><td>每 2s 少一次全 Descendants</td></tr>
+      <tr><td><span class="badge badge-p2">P2</span></td><td>RefreshAllESPNow 预编译 map + 变化才写</td><td>GC 明显下降</td></tr>
+      <tr><td><span class="badge badge-p3">P3</span></td><td>BindVerticalCanvas 信号瘦身</td><td>UI 拖拽更顺</td></tr>
+      <tr><td><span class="badge badge-p3">P3</span></td><td>循环按需启动</td><td>空闲时 CPU 空转减少</td></tr>
+      <tr><td><span class="badge badge-p3">P3</span></td><td>Tween 懒创建 / 通知对象池</td><td>内存与 GC 更平滑</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 01 -->
+  <div class="section-title">详细优化项</div>
+  <div class="opt-card" id="p1">
+    <div class="opt-head">
+      <div class="opt-num">01</div>
+      <div class="opt-title">钓鱼按钮「三重冗余守护」</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>当 <code>Config.AutoCast == false</code> 时，钓鱼按钮的守护显示逻辑同时存在于 <strong>三处</strong>：</p>
+      <ul style="padding-left:20px;margin-bottom:10px;">
+        <li>Heartbeat 里每 0.25s 触发 <code>RestoreMobileFishingButtonUI(false)</code></li>
+        <li>RenderStepped 里又写一遍 <code>cachedMobileFishBtn.Visible = true</code></li>
+        <li>BindToRenderStep("IdenticalForceFishBtnVisible", Last, ...) 再写一份</li>
+      </ul>
+      <p>也就是说，关闭自动抛竿后每帧至少 2 次属性赋值，0.25s 还会触发潜在的全屏扫描。</p>
+      <p><span class="label label-suggest">建议</span>只保留 <code>BindToRenderStep</code> 那处（它本就是为压制原版每帧隐藏而设计，优先级最高）。删除 RenderStepped 中的重复块，Heartbeat 只保留状态清零。所有赋值改为「变化才写」：</p>
+      <pre><code><span class="kw">if</span> cachedMobileFishBtn.Visible ~= <span class="kw">true</span> <span class="kw">then</span> cachedMobileFishBtn.Visible = <span class="kw">true</span> <span class="kw">end</span>
+<span class="kw">if</span> cachedMobileFishBtn.Active ~= <span class="kw">true</span> <span class="kw">then</span> cachedMobileFishBtn.Active = <span class="kw">true</span> <span class="kw">end</span></code></pre>
+    </div>
+  </div>
+
+  <!-- 02 -->
+  <div class="opt-card" id="p2">
+    <div class="opt-head">
+      <div class="opt-num">02</div>
+      <div class="opt-title">GetMobileFishingButton 缓存命中条件太苛刻</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>当前判断：</p>
+      <pre><code><span class="kw">if</span> cachedMobileFishBtn <span class="kw">and</span> cachedMobileFishBtn.Parent <span class="kw">and</span> (includeHidden <span class="kw">or</span> cachedMobileFishBtn.Visible) <span class="kw">then</span>
+    <span class="kw">return</span> cachedMobileFishBtn
+<span class="kw">end</span></code></pre>
+      <p>当原版脚本每帧隐藏按钮时，<code>Visible</code> 会不断变成 false，导致缓存永远失效、每次都要重扫全屏。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>判活只保留 <code>cachedMobileFishBtn and cachedMobileFishBtn.Parent</code>，<code>Visible</code> 交给外部守护逻辑</li>
+        <li>两次全屏扫描之间加 3~5 秒节流，失败后指数退避</li>
+        <li>扫描时改用 <code>GetChildren()</code> 只走 ScreenGui 的直接子控件，不用 GetDescendants</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 03 -->
+  <div class="opt-card" id="p3">
+    <div class="opt-head">
+      <div class="opt-num">03</div>
+      <div class="opt-title">Heartbeat 里连续读取 4 次 GetAttribute</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span></p>
+      <pre><code><span class="kw">local</span> isFishing  = char:GetAttribute(<span class="str">"Fishing"</span>) == <span class="kw">true</span>
+<span class="kw">local</span> isCD       = char:GetAttribute(<span class="str">"CDForTheNextThrow"</span>) == <span class="kw">true</span>
+<span class="kw">local</span> isMinigame = char:GetAttribute(<span class="str">"Minigame"</span>) == <span class="kw">true</span> ...
+<span class="kw">local</span> isSwimming = char:GetAttribute(<span class="str">"Swimming"</span>) == <span class="kw">true</span></code></pre>
+      <p>GetAttribute 涉及 C++ → Luau 边界，每帧 4 次很浪费。</p>
+      <p><span class="label label-suggest">建议</span>用 <code>AttributeChanged</code> 缓存到局部变量：</p>
+      <pre><code><span class="kw">local</span> attrFishing, attrCD, attrMinigame, attrSwimming = <span class="kw">false</span>, <span class="kw">false</span>, <span class="kw">false</span>, <span class="kw">false</span>
+char.AttributeChanged:<span class="fn">Connect</span>(<span class="kw">function</span>(name)
+    <span class="kw">if</span> name == <span class="str">"Fishing"</span> <span class="kw">then</span>
+        attrFishing = char:<span class="fn">GetAttribute</span>(<span class="str">"Fishing"</span>) == <span class="kw">true</span>
+    <span class="kw">elseif</span> name == <span class="str">"CDForTheNextThrow"</span> <span class="kw">then</span>
+        attrCD = char:<span class="fn">GetAttribute</span>(<span class="str">"CDForTheNextThrow"</span>) == <span class="kw">true</span>
+    <span class="kw">end</span>
+<span class="kw">end</span>)</code></pre>
+      <p>在 CharacterAdded 时重新绑定即可。</p>
+    </div>
+  </div>
+
+  <!-- 04 -->
+  <div class="opt-card" id="p4">
+    <div class="opt-head">
+      <div class="opt-num">04</div>
+      <div class="opt-title">DoesInstanceMatchNPCSpec 是 O(NPC × Specs) 的两层循环</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>雷达每 1.25s 对每个 NPC 实例遍历 27 个 ImportantDialogueNPCs，每个还要 GetCompiledSpecKeywords 再逐个别名查找。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>建立 <strong>反向索引</strong>：一次扫描把 spec → keywords 全展开成 <code>keyword → specList</code> 的 map，扫描时先用 <code>inst.Name:lower()</code> 做 hash 查表命中</li>
+        <li>summary 缓存已有 30s 有效期，但<strong>不要用 GetDescendants()</strong> 构造，只取第一层 ProximityPrompt / TextLabel + Humanoid.DisplayName</li>
+        <li>对同一个 NPC 匹配后 break 出 loop</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 05 -->
+  <div class="opt-card" id="p5">
+    <div class="opt-head">
+      <div class="opt-num">05</div>
+      <div class="opt-title">RefreshAllESPNow 每 0.25s 的字符串拼接 + 无条件赋值</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span></p>
+      <pre><code><span class="kw">local</span> isEnabled = (Config[<span class="str">"ESP_"</span> .. data.espCategory] == <span class="kw">true</span>)</code></pre>
+      <p>每次拼新字符串产生 GC 压力。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>建预编译 map 复用：</li>
+      </ul>
+      <pre><code><span class="kw">local</span> ESP_CATEGORY_KEYS = {
+    GodSpirit = <span class="str">"ESP_GodSpirit"</span>,  SecretRod = <span class="str">"ESP_SecretRod"</span>,
+    Boats     = <span class="str">"ESP_Boats"</span>,      Maoshan   = <span class="str">"ESP_Maoshan"</span>,
+    Taoist    = <span class="str">"ESP_Taoist"</span>,     Boss      = <span class="str">"ESP_Boss"</span>,
+    Players   = <span class="str">"ESP_Players"</span>,
+}
+<span class="kw">local</span> isEnabled = Config[ESP_CATEGORY_KEYS[data.espCategory]] == <span class="kw">true</span></code></pre>
+      <ul style="padding-left:20px;">
+        <li>距离用<strong>平方距离</strong>比对，且只在变化 ≥1 米时刷新文字</li>
+        <li>只有在任一 ESP 分类开启时才跑刷新循环，否则 skip</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 06 -->
+  <div class="opt-card" id="p6">
+    <div class="opt-head">
+      <div class="opt-num">06</div>
+      <div class="opt-title">GetCachedSkillButton 每 2 秒全量 Descendants</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>每隔 2 秒会把 fUI / Fisher_GUI / MainGui 的 Descendants 全走一遍，每个按钮再跑 DoesButtonMatchSkillKey（内部还 GetDescendants + 遍历兄弟节点）。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>技能面板 DOM 很少变，用 <code>fUI.DescendantAdded / DescendantRemoving</code> 增量维护，不做周期性全扫</li>
+        <li>DoesButtonMatchSkillKey 删除 <code>d:GetDescendants()</code> 兜底分支，只查 Name + Text + 一层 Parent 兄弟 TextLabel</li>
+        <li>缓存生命周期与 cachedFUI 绑定，Fisher_GUI 重建时清空</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 07 -->
+  <div class="opt-card" id="p7">
+    <div class="opt-head">
+      <div class="opt-num">07</div>
+      <div class="opt-title">IsCharacterHoldingFishingRod 每帧调用</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>函数内部遍历 char:GetChildren()（每个 Model / Tool），未找到 Tool 时还要遍历 Backpack:GetChildren() 找鱼竿。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>缓存结果，只在 <code>char.ChildAdded/Removed</code>、<code>Backpack.ChildAdded/Removed</code> 时更新</li>
+        <li>或缓存 0.2s 到期后再重判断</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 08 -->
+  <div class="opt-card" id="p8">
+    <div class="opt-head">
+      <div class="opt-num">08</div>
+      <div class="opt-title">TryFavoriteProtectedFish 每 3 秒遍历整个背包</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>Heartbeat 每 3 秒触发，函数内部对 Inventory / Hotbar 每个 item 跑 IsFishItemFavorited（遍历子节点）+ ShouldProtectFishItem（多个子节点 + Attribute）。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>改<strong>增量队列</strong>：Inventory.ChildAdded / Hotbar.ChildAdded 时给新 item 打一次检查，push 到待办队列</li>
+        <li>周期任务只处理这个待办队列，不重扫全背包</li>
+        <li>已经发过 FavoriteItem 的 item 用 lastLockSentAt[item] 记录后，整个 item 从待扫名单剔除</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 09 -->
+  <div class="opt-card" id="p9">
+    <div class="opt-head">
+      <div class="opt-num">09</div>
+      <div class="opt-title">SafeSellAllFish 循环内重复校验</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>逐条卖鱼时每次 <code>IsSellPacketArgBlacklisted(normalItem)</code> + <code>IsSellPacketArgBlacklisted(normalItem.Name)</code> 都做纯字符串匹配，可能递归到 HasAnyProtectedFishInBag。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>循环前扫 sellableItems 时把 safe 布尔写入 item 的弱表缓存，循环内不再二次校验</li>
+        <li>HasAnyProtectedFishInBag 不要每次新建 containers 表，直接用已 Scan 好的 protectedPureSet</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="opt-card" id="p10">
+    <div class="opt-head">
+      <div class="opt-num">10</div>
+      <div class="opt-title">DismissStuckPromptsAndRestore 被多次并发调用</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>Heartbeat 每 1.25s 无条件调用一次，外层 while 又在 IsDialogueUIOpen 前后各调一次，TriggerNPCInstancePrompts 内部还有 delay 0.18/0.3 各一次，触发对话瞬间会连开 4~5 次。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>加 <strong>0.5s 节流门</strong>（lastDismissTime），并发触发直接 return</li>
+        <li>forceScanAll 的 Workspace:GetDescendants() 只在启动 / 手动点击时执行，雷达循环只走 originalPromptState 已有条目</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 11 -->
+  <div class="opt-card" id="p11">
+    <div class="opt-head">
+      <div class="opt-num">11</div>
+      <div class="opt-title">BindVerticalCanvas 为每个子项挂 2 个属性变化监听</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span></p>
+      <pre><code>child:<span class="fn">GetPropertyChangedSignal</span>(<span class="str">"AbsoluteSize"</span>):<span class="fn">Connect</span>(requestRefresh)
+child:<span class="fn">GetPropertyChangedSignal</span>(<span class="str">"Visible"</span>):<span class="fn">Connect</span>(requestRefresh)</code></pre>
+      <p>配合 UIListLayout.AbsoluteContentSize + scrollFrame 的 2 个信号，每个 page 上子控件的信号累计可达上百条。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>只保留 AbsoluteSize（Visible 变化基本伴随尺寸变化）</li>
+        <li>requestRefresh 节流窗口从 0.08s 放宽到 0.15s</li>
+        <li>measureContentHeight 直接信任 layout.AbsoluteContentSize.Y + extraPadding，不再逐项 AbsoluteSize 累加</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 12 -->
+  <div class="opt-card" id="p12">
+    <div class="opt-head">
+      <div class="opt-num">12</div>
+      <div class="opt-title">UI 构建函数中 Tween 对象滥用</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>createToggleRow、createDropdownRow、createButtonRow、createNPCDualActionRow、CreateDashCard 等都在函数入口一次性创建 2~4 个 TweenService:Create 对象。UI 上 100 个 toggle 就常驻 400 个 Tween 实例。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>改成<strong>懒创建</strong>（第一次点击时才建）</li>
+        <li>复用单一 TweenInfo 常量（TweenInfo 本身也可缓存）</li>
+        <li>高频场景（ESP 距离文字、通知卡）不要建 Tween，直接赋值</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 13 -->
+  <div class="opt-card" id="p13">
+    <div class="opt-head">
+      <div class="opt-num">13</div>
+      <div class="opt-title">ShowNotification 频繁 Tween + task.delay</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>每次通知 TweenService:Create 两次（滑入 + 滑出）+ 一次 task.delay。MAX_NOTIF_CARDS = 4 下每 3~5 秒产生 6~8 个新 Tween。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>反向 Tween 前先检查 <code>card.Parent</code>，避免销毁后播放抛错</li>
+        <li>通知卡改用<strong>对象池</strong>（3~4 个 slot 预建，切换文本 + 重播 Tween），避免 Instance.new + Destroy 抖动</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 14 -->
+  <div class="opt-card" id="p14">
+    <div class="opt-head">
+      <div class="opt-num">14</div>
+      <div class="opt-title">while isRunning 常驻循环即使功能关闭也在跑</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>四个常驻循环：0.25s ESP 刷新、1.25s 雷达、0.5s Dashboard 更新、3s 钓鱼按钮守护。功能全部关闭时仍占用 CPU。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>全部改成<strong>按需启动</strong>：功能开启时才 task.spawn 并保存循环引用，关闭时 task.cancel</li>
+        <li>用统一 Scheduler 中心只维护「是否还有活」的依赖集合</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 15 -->
+  <div class="opt-card" id="p15">
+    <div class="opt-head">
+      <div class="opt-num">15</div>
+      <div class="opt-title">RefreshGuiAndDataRefs 每 0.4s 大量 FindFirstChild</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>每次执行 4~6 次 FindFirstChild 链：</p>
+      <pre><code>cachedMainGui = cachedPG:<span class="fn">FindFirstChild</span>(<span class="str">"MainGui"</span>)
+cachedFUI = (cachedMainGui <span class="kw">and</span> cachedMainGui:<span class="fn">FindFirstChild</span>(<span class="str">"Fishing"</span>))
+    <span class="kw">or</span> (cachedPG <span class="kw">and</span> cachedPG:<span class="fn">FindFirstChild</span>(<span class="str">"Fishing"</span>))
+    <span class="kw">or</span> (fisherGui <span class="kw">and</span> fisherGui:<span class="fn">FindFirstChild</span>(<span class="str">"Fishing"</span>))
+cachedBossBar = cachedFUI <span class="kw">and</span> cachedFUI:<span class="fn">FindFirstChild</span>(<span class="str">"BossFightBar"</span>)</code></pre>
+      <p><span class="label label-suggest">建议</span>改事件驱动：<code>PlayerGui.ChildAdded/Removed</code> 更新 cachedMainGui / cachedFUI，<code>cachedFUI.ChildAdded/Removed</code> 更新 cachedBossBar。缓存命中条件简化成「只要 cachedFUI 存活就返回」。</p>
+    </div>
+  </div>
+
+  <!-- 16 -->
+  <div class="opt-card" id="p16">
+    <div class="opt-head">
+      <div class="opt-num">16</div>
+      <div class="opt-title">IsDialogueUIOpen 兜底分支遍历所有 Gui 的 Descendants</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>当 priorityGuis 为空时，兜底分支会对每个可见 Gui 顶层子控件跑 GetDescendants()。商店/背包面板有几百个子控件，一旦进兜底代价非常高。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>记住上一次命中的 cachedDialogueNode，Parent 未销毁就不重新找</li>
+        <li>兜底分支限制只查可见 ScreenGui 顶层前 3~5 个 GuiObject</li>
+        <li>或用 getconnections 挂 PlayerGui.DescendantAdded，命中对话弹窗就缓存</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 17 -->
+  <div class="opt-card" id="p17">
+    <div class="opt-head">
+      <div class="opt-num">17</div>
+      <div class="opt-title">GetPureFishName / patternCache 满容量直接 clear</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>pureNameCache 容量满 512 时 table.clear，导致新名字的缓存全失效，触发新一轮 hash 分配（patternCache 256 同理）。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>满时用简单 LRU 剔除（记录 lastUsed 时间覆盖最旧的 1/4），比 clear 更平滑</li>
+        <li>或容量提到 1024，配合弱表</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 18 -->
+  <div class="opt-card" id="p18">
+    <div class="opt-head">
+      <div class="opt-num">18</div>
+      <div class="opt-title">__namecall Hook 里用非 plain 模式 find</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span></p>
+      <pre><code><span class="kw">if</span> action == <span class="str">"Out of bar"</span> <span class="kw">or</span> action == <span class="str">"Out of bar (overpull)"</span>
+    <span class="kw">or</span> action:<span class="fn">find</span>(<span class="str">"Out of bar"</span>) <span class="kw">or</span> action:<span class="fn">find</span>(<span class="str">"Fail"</span>) <span class="kw">or</span> action:<span class="fn">find</span>(<span class="str">"Miss"</span>) <span class="kw">then</span></code></pre>
+      <p>find 未指定 plain=true 会走 Lua pattern 引擎，慢于 plain 模式。若服务端频繁推 FishingMinigame，每帧都可能跑一次。</p>
+      <p><span class="label label-suggest">建议</span>常量提到上值，使用 <code>:find(str, 1, true)</code> plain 模式。</p>
+    </div>
+  </div>
+
+  <!-- 19 -->
+  <div class="opt-card" id="p19">
+    <div class="opt-head">
+      <div class="opt-num">19</div>
+      <div class="opt-title">异步 InvokeServer 可能 yield 永久挂起</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span></p>
+      <pre><code>task.<span class="fn">spawn</span>(<span class="kw">function</span>()
+    <span class="fn">pcall</span>(<span class="kw">function</span>() rem:<span class="fn">InvokeServer</span>(<span class="fn">unpack</span>(args)) <span class="kw">end</span>)
+<span class="kw">end</span>)</code></pre>
+      <p>InvokeServer 会 yield 等服务端返回，如果服务端不返回则协程永久占着调度槽。</p>
+      <p><span class="label label-suggest">建议</span>给异步 Invoke 加超时兜底（如果 RemoteFunction 支持），或直接改 FireServer（多数场景服务端不关心返回值）。</p>
+    </div>
+  </div>
+
+  <!-- 20 -->
+  <div class="opt-card" id="p20">
+    <div class="opt-head">
+      <div class="opt-num">20</div>
+      <div class="opt-title">activeConnections 数组无限增长</div>
+    </div>
+    <div class="opt-body">
+      <p><span class="label label-problem">问题</span>table.insert(activeConnections, ...) 分布在 Radar / BindVerticalCanvas / 每个 Toggle 里。UnloadScript 会清理，但运行时没有任何回收机制，Destroy 后的连接不会自动从数组移除。</p>
+      <p><span class="label label-suggest">建议</span></p>
+      <ul style="padding-left:20px;">
+        <li>用 <code>{ conn = c, alive = true }</code> 包装</li>
+        <li>或每个循环启动时把旧连接 Disconnect()，避免残留</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="conclusion">
+    <span class="big">一句话总结</span>
+    这份脚本的瓶颈不在算法复杂度，而在 <strong>「同一件事多路重复做」</strong>（三条钓鱼按钮恢复、两条 RestoreMobileFishingButtonUI、两个技能扫描循环）和 <strong>「每帧都做属性查找 / 字符串拼接」</strong>（GetAttribute、Config["ESP_"..cat]、FindFirstChild 链）。
+    <br><br>
+    把上述重复路径合并 + 事件化缓存后，同等场景下 Heartbeat 的工作量大约能砍掉 <strong style="color:var(--green);">50%~70%</strong>，帧率抖动会明显改善。
+  </div>
+
+</div>
+</body>
+</html>
