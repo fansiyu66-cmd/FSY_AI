@@ -1,170 +1,148 @@
 --[[
 ================================================================================
-  BtnDoctor —— 钓鱼按钮诊断器（独立脚本，只读，不改任何东西）
-  用途：查清「游戏原生钓鱼按钮为什么不见了 / 为什么不显示」。
-  它只做三件事：扫描、把结果摊在窗口里、允许一键复制。不发送任何包、不修改任何属性。
+  BtnDoctor v2 —— 钓鱼按钮诊断器（独立脚本，只读）
+  v1 的问题：窗口先按 30px 建、再靠 setOpen 撑开；一旦中途任何一句抛错，
+                窗口就停在一条横条上，报告也写不进去 —— 屏幕上看就是"只有一个标题条"。
+  v2 的改法：窗口一开始就是全尺寸、报告框一开始就可见；整段构建包在 pcall 里，
+                真出错就把错误原文写进报告框，看得到才好排查。
 --------------------------------------------------------------------------------
-  用法：
-      1) 执行器里注入本脚本（可以和主脚本同时跑，互不干扰）
-      2) 等钓鱼按钮"消失"的那一刻，点窗口里的「重新扫描」
-      3) 把文本框里的内容复制/截图发我
---------------------------------------------------------------------------------
-  报告会直接指出是哪一种情况：
-      A. 某层父级 Visible=false / Enabled=false  → 被藏了
-      B. 尺寸为 0 / 坐标在屏幕外                 → 被挪走了
-      C. 全都正常但按钮不在场景里                → 根本没生成 / 被销毁
-      D. 脚本没认出这个按钮                      → 识别规则对不上
+  用法：注入 → 等按钮消失 → 点「扫描」→ 点「复制」把内容发我（或直接截图）
 ================================================================================
 ]]
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local OUT = {}          -- 报告行
-local UI = {}
-
+local OUT = {}
 local function add(s) OUT[#OUT + 1] = tostring(s) end
 
 local function isFishLike(d)
-    if not (d:IsA("TextButton") or d:IsA("ImageButton")) then return false end
-    local nm = string.lower(d.Name or "")
+    local okB, isBtn = pcall(function() return d:IsA("TextButton") or d:IsA("ImageButton") end)
+    if not (okB and isBtn) then return false end
+    local nm = string.lower(tostring(d.Name or ""))
     if nm:find("fish") or nm:find("cast") or nm:find("rod") then return true end
-    if d:IsA("TextButton") then
-        local t = d.Text or ""
-        if t:find("钓鱼", 1, true) or t:find("抛竿", 1, true) or t:find("Câu", 1, true) then return true end
+    local okT, txt = pcall(function() return d.Text end)
+    if okT and type(txt) == "string" then
+        if txt:find("钓鱼", 1, true) or txt:find("抛竿", 1, true) then return true end
     end
-    local low = string.lower(d:GetFullName() or "")
-    if low:find("fish") or low:find("cast") then return true end
+    local okF, full = pcall(function() return d:GetFullName() end)
+    if okF and type(full) == "string" then
+        local low = string.lower(full)
+        if low:find("fish") or low:find("cast") then return true end
+    end
     return false
 end
 
 local function chainOf(d, pg)
     local rows, cur, n = {}, d, 0
-    while cur and n < 10 and cur ~= game do
-        -- 注意：不能写 `pcall(...) and cur.Visible or nil` —— 当 Visible 是 false 时会被 or 吞成 nil，
-        -- 结果报告里最关键的那个 V=false 反而显示不出来（这是本工具第一版踩过的坑）。
-        local v, e, pos, sz, tr = nil, nil, nil, nil, nil
-        local okV, vv = pcall(function() return cur.Visible end)
-        if okV then v = vv end
-        local okE, ee = pcall(function() return cur.Enabled end)
-        if okE then e = ee end
-        local okP, pp = pcall(function() return cur.AbsolutePosition end)
-        if okP then pos = pp end
-        local okS, ss = pcall(function() return cur.AbsoluteSize end)
-        if okS then sz = ss end
-        local okT, tt = pcall(function() return cur.Transparency end)
-        if okT then tr = tt end
-        local line = string.format("%s(%s)", tostring(cur.Name), tostring(cur.ClassName))
-        if v ~= nil then line = line .. " V=" .. tostring(v) end
-        if e ~= nil then line = line .. " E=" .. tostring(e) end
-        if pos then line = line .. string.format(" pos=(%.0f,%.0f)", pos.X, pos.Y) end
-        if sz then line = line .. string.format(" size=(%.0f,%.0f)", sz.X, sz.Y) end
-        if tr ~= nil then line = line .. string.format(" T=%.2f", tr) end
+    while cur and n < 10 do
+        local line = tostring(cur.Name) .. "(" .. tostring(cur.ClassName) .. ")"
+        local okV, v = pcall(function() return cur.Visible end)
+        if okV then line = line .. " V=" .. tostring(v) end
+        local okE, e = pcall(function() return cur.Enabled end)
+        if okE then line = line .. " E=" .. tostring(e) end
+        local okP, p = pcall(function() return cur.AbsolutePosition end)
+        if okP and p then line = line .. string.format(" pos=(%.0f,%.0f)", p.X, p.Y) end
+        local okS, s = pcall(function() return cur.AbsoluteSize end)
+        if okS and s then line = line .. string.format(" size=(%.0f,%.0f)", s.X, s.Y) end
+        local okT, t = pcall(function() return cur.Transparency end)
+        if okT then line = line .. string.format(" T=%.2f", t) end
         rows[#rows + 1] = line
-        cur = cur.Parent
-        n = n + 1
         if cur == pg or cur == game then break end
+        local okPar, par = pcall(function() return cur.Parent end)
+        if not okPar then break end
+        cur = par
+        n = n + 1
     end
     return rows
 end
 
-function Scan()
+local function Scan()
     OUT = {}
     local pg = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
-    if not pg then add("PlayerGui 不存在（还没进游戏？）") return end
-    local screenW = 0
-    pcall(function()
-        local cam = workspace.CurrentCamera
-        if cam then screenW = cam.ViewportSize.X end
-    end)
+    if not pg then add("PlayerGui 不存在") return end
 
-    add("========== 1. PlayerGui 下所有 ScreenGui ==========")
+    add("========== 1. PlayerGui 下的 ScreenGui ==========")
     for _, g in ipairs(pg:GetChildren()) do
-        if g:IsA("ScreenGui") then
-            add(string.format("  %-28s Enabled=%s", tostring(g.Name), tostring(g.Enabled)))
+        local okG, isGui = pcall(function() return g:IsA("ScreenGui") end)
+        if okG and isGui then
+            add(string.format("  %-30s Enabled=%s", tostring(g.Name), tostring(g.Enabled)))
         end
     end
 
     add("")
-    add("========== 2. 疑似钓鱼按钮（逐个列出父级链） ==========")
+    add("========== 2. 疑似钓鱼按钮（父级链逐层列出） ==========")
     local found = 0
     for _, g in ipairs(pg:GetChildren()) do
-        if g:IsA("ScreenGui") and g.Name ~= "RobloxGui"
-            and g.Name ~= "IdenticalHeavyweightFishing" and g.Name ~= "RSLiteGui" and g.Name ~= "BtnDoctorGui" then
+        local okG, isGui = pcall(function() return g:IsA("ScreenGui") end)
+        if okG and isGui and g.Name ~= "RobloxGui" and g.Name ~= "BtnDoctorGui" then
             for _, d in ipairs(g:GetDescendants()) do
                 if isFishLike(d) then
                     found = found + 1
                     add("")
-                    add(string.format("[%d] %s", found, d:GetFullName()))
+                    add(string.format("[%d] %s", found, tostring(d:GetFullName())))
                     local rows = chainOf(d, pg)
                     for i, r in ipairs(rows) do
                         add("      " .. string.rep("  ", i - 1) .. r)
                     end
-                    -- 自动判定
-                    local hidden, offscreen, zero = false, false, false
+                    local hidden, zero = false, false
                     for _, r in ipairs(rows) do
                         if r:find("V=false") or r:find("E=false") then hidden = true end
                     end
-                    local okPos, pos = pcall(function() return d.AbsolutePosition end)
-                    local okSz, sz = pcall(function() return d.AbsoluteSize end)
-                    if okSz and sz and (sz.X < 2 or sz.Y < 2) then zero = true end
-                    if okPos and pos and screenW > 0 and (pos.X < -50 or pos.X > screenW + 50 or pos.Y < -50) then offscreen = true end
-                    add("      >>> 判定: " .. (hidden and "【被隐藏】父级有 V=false 或 E=false"
+                    local okS, sz = pcall(function() return d.AbsoluteSize end)
+                    if okS and sz and (sz.X < 2 or sz.Y < 2) then zero = true end
+                    add("      >>> 判定: " .. (hidden and "【被隐藏】父级链里有 V=false 或 E=false"
                         or zero and "【尺寸为 0】"
-                        or offscreen and "【被移到屏幕外】"
-                        or "【看起来正常】那问题不在显隐，可能是被别的控件盖住或游戏没意图显示"))
+                        or "【看起来正常】不是显隐问题，可能被遮挡或游戏本就不打算显示"))
                 end
             end
         end
     end
     if found == 0 then
         add("  （一个都没扫到）")
-        add("  >>> 说明：按钮所在容器可能不叫 fish/cast，或者此刻根本没生成。")
-        add("  >>> 请把下面第 3 段完整发我，我照着改识别规则。")
+        add("  >>> 说明按钮容器名字不含 fish/cast，或此刻根本没生成。")
+        add("  >>> 把第 1 段完整发我，我按真实名字改识别规则。")
     end
 
     add("")
-    add("========== 3. 脚本自己怎么看（主脚本注入过才有值） ==========")
-    local ok, ge = pcall(function() return getgenv() end)
-    if ok and ge then
+    add("========== 3. 主脚本怎么看这个按钮 ==========")
+    local okGe, ge = pcall(function() return getgenv() end)
+    if okGe and ge then
         add("  IdenticalProtectedFishBtn   = " .. tostring(ge.IdenticalProtectedFishBtn))
         add("  IdenticalKeepFishBtnVisible = " .. tostring(ge.IdenticalKeepFishBtnVisible))
         add("  IdenticalFishingRunning     = " .. tostring(ge.IdenticalFishingRunning))
         local b = ge.IdenticalProtectedFishBtn
         if b then
-            local okV = pcall(function() return b.Visible end)
-            add("  → 脚本缓存的按钮 Visible = " .. (okV and tostring(b.Visible) or "读取失败"))
-            local okP = pcall(function() return b:GetFullName() end)
-            add("  → 脚本缓存的按钮路径     = " .. (okP and tostring(b:GetFullName()) or "?"))
+            local okV, v = pcall(function() return b.Visible end)
+            add("  → 缓存的按钮 Visible = " .. (okV and tostring(v) or "?"))
+            local okF, f = pcall(function() return b:GetFullName() end)
+            add("  → 缓存的按钮路径     = " .. (okF and tostring(f) or "?"))
         else
-            add("  → 脚本压根没认出这个按钮（识别规则没匹配上）")
+            add("  → 主脚本没认出这个按钮（识别规则没匹配上）")
+        end
+        local c = ge.IdenticalFishingConfig
+        if c then
+            add("  AutoCast=" .. tostring(c.AutoCast) .. "  HideGameUI=" .. tostring(c.HideGameUI)
+                .. "  AutoFarmBoss=" .. tostring(c.AutoFarmBoss))
+        else
+            add("  （没读到主脚本配置：主脚本没注入或版本较旧）")
         end
     else
         add("  getgenv() 不可用")
-    end
-
-    add("")
-    add("========== 4. 主脚本 UI 里的相关开关 ==========")
-    if ok and ge and ge.IdenticalFishingConfig then
-        local c = ge.IdenticalFishingConfig
-        add("  AutoCast        = " .. tostring(c.AutoCast))
-        add("  HideGameUI      = " .. tostring(c.HideGameUI))
-        add("  AutoFarmBoss    = " .. tostring(c.AutoFarmBoss))
-        add("  AutoFarmSecretBoss = " .. tostring(c.AutoFarmSecretBoss))
-    else
-        add("  没有读到主脚本配置（主脚本没注入？）")
     end
     add("")
     add("===== 报告结束 =====")
 end
 
--- ============================ 界面（加载期一次性构建） ============================
+-- ============================ UI（一开始就是全尺寸） ============================
+local UI = {}
+
 local function buildUI()
     local parent
-    local ok, core = pcall(function() return game:GetService("CoreGui") end)
-    if ok and core then parent = core end
+    local okCore, core = pcall(function() return game:GetService("CoreGui") end)
+    if okCore and core then parent = core end
     if not parent then parent = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") end
-    if not parent then return false end
+    if not parent then return false, "没有 CoreGui / PlayerGui" end
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "BtnDoctorGui"
@@ -175,9 +153,9 @@ local function buildUI()
 
     local frame = Instance.new("Frame")
     frame.Name = "Main"
-    frame.Size = UDim2.new(0, 340, 0, 30)
-    frame.Position = UDim2.new(0.5, -170, 0.3, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+    frame.Size = UDim2.new(0, 340, 0, 380)      -- 一开始就全尺寸（v1 的坑就在这）
+    frame.Position = UDim2.new(0.5, -170, 0.12, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
     frame.BorderSizePixel = 0
     frame.Active = true
     frame.Draggable = true
@@ -189,7 +167,7 @@ local function buildUI()
     corner.Parent = frame
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -100, 0, 30)
+    title.Size = UDim2.new(1, -140, 0, 28)
     title.Position = UDim2.new(0, 8, 0, 0)
     title.BackgroundTransparency = 1
     title.Font = Enum.Font.GothamBold
@@ -199,86 +177,55 @@ local function buildUI()
     title.Text = "钓鱼按钮诊断器"
     title.Parent = frame
 
-    local btnScan = Instance.new("TextButton")
-    btnScan.Name = "Scan"
-    btnScan.Size = UDim2.new(0, 34, 0, 22)
-    btnScan.Position = UDim2.new(1, -104, 0, 4)
-    btnScan.BackgroundColor3 = Color3.fromRGB(46, 60, 54)
-    btnScan.BorderSizePixel = 0
-    btnScan.Font = Enum.Font.GothamBold
-    btnScan.TextSize = 11
-    btnScan.TextColor3 = Color3.fromRGB(220, 240, 230)
-    btnScan.Text = "扫描"
-    btnScan.Parent = frame
-
-    local btnCopy = Instance.new("TextButton")
-    btnCopy.Name = "Copy"
-    btnCopy.Size = UDim2.new(0, 34, 0, 22)
-    btnCopy.Position = UDim2.new(1, -66, 0, 4)
-    btnCopy.BackgroundColor3 = Color3.fromRGB(46, 60, 54)
-    btnCopy.BorderSizePixel = 0
-    btnCopy.Font = Enum.Font.GothamBold
-    btnCopy.TextSize = 11
-    btnCopy.TextColor3 = Color3.fromRGB(220, 240, 230)
-    btnCopy.Text = "复制"
-    btnCopy.Parent = frame
-
-    local btnOpen = Instance.new("TextButton")
-    btnOpen.Name = "Open"
-    btnOpen.Size = UDim2.new(0, 26, 0, 22)
-    btnOpen.Position = UDim2.new(1, -30, 0, 4)
-    btnOpen.BackgroundColor3 = Color3.fromRGB(58, 46, 46)
-    btnOpen.BorderSizePixel = 0
-    btnOpen.Font = Enum.Font.GothamBold
-    btnOpen.TextSize = 12
-    btnOpen.TextColor3 = Color3.fromRGB(255, 200, 200)
-    btnOpen.Text = "×"
-    btnOpen.Parent = frame
+    local function mkBtn(name, text, xOff, bg)
+        local b = Instance.new("TextButton")
+        b.Name = name
+        b.Size = UDim2.new(0, 40, 0, 22)
+        b.Position = UDim2.new(1, xOff, 0, 3)
+        b.BackgroundColor3 = bg
+        b.BorderSizePixel = 0
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 11
+        b.TextColor3 = Color3.fromRGB(225, 240, 235)
+        b.Text = text
+        b.Parent = frame
+        return b
+    end
+    local btnScan = mkBtn("Scan", "扫描", -134, Color3.fromRGB(46, 62, 56))
+    local btnCopy = mkBtn("Copy", "复制", -90, Color3.fromRGB(46, 62, 56))
+    local btnClose = mkBtn("Close", "×", -28, Color3.fromRGB(62, 44, 44))
 
     local box = Instance.new("TextBox")
     box.Name = "Report"
-    box.Size = UDim2.new(1, -12, 1, -40)
-    box.Position = UDim2.new(0, 6, 0, 34)
-    box.BackgroundColor3 = Color3.fromRGB(12, 15, 20)
+    box.Size = UDim2.new(1, -12, 1, -36)
+    box.Position = UDim2.new(0, 6, 0, 30)
+    box.BackgroundColor3 = Color3.fromRGB(10, 13, 18)
     box.BorderSizePixel = 0
     box.Font = Enum.Font.Code
     box.TextSize = 11
     box.TextXAlignment = Enum.TextXAlignment.Left
     box.TextYAlignment = Enum.TextYAlignment.Top
-    box.TextWrapped = false
+    box.TextWrapped = true
     box.MultiLine = true
     box.ClearTextOnFocus = false
     box.TextEditable = false
     box.TextColor3 = Color3.fromRGB(200, 220, 240)
-    box.Text = "点右上角「扫描」"
-    box.Visible = true
+    box.Text = "正在扫描…"
     box.Parent = frame
 
-    UI.gui = gui
-    UI.frame = frame
-    UI.box = box
-    UI.open = false
+    UI.gui, UI.frame, UI.box = gui, frame, box
 
-    local function setOpen(v)
-        UI.open = v and true or false
-        frame.Size = UI.open and UDim2.new(0, 340, 0, 360) or UDim2.new(0, 340, 0, 30)
-        box.Visible = UI.open
-        btnScan.Visible = UI.open
-        btnCopy.Visible = UI.open
-        btnOpen.Text = UI.open and "×" or "▣"
-    end
-
-    btnOpen.MouseButton1Click:Connect(function()
-        if UI.open then
-            gui:Destroy()
-            UI.gui = nil
-        else
-            setOpen(true)
-        end
+    btnClose.MouseButton1Click:Connect(function()
+        pcall(function() gui:Destroy() end)
+        UI.gui = nil
     end)
     btnScan.MouseButton1Click:Connect(function()
-        pcall(Scan)
-        box.Text = table.concat(OUT, "\n")
+        local ok, err = pcall(Scan)
+        if not ok then
+            box.Text = "扫描出错：\n" .. tostring(err)
+        else
+            box.Text = table.concat(OUT, "\n")
+        end
     end)
     btnCopy.MouseButton1Click:Connect(function()
         local t = box.Text or ""
@@ -287,24 +234,36 @@ local function buildUI()
         btnCopy.Text = "已复制"
     end)
 
-    pcall(Scan)
-    box.Text = table.concat(OUT, "\n")
-    setOpen(true)
     return true
 end
 
-local ok = pcall(buildUI)
-if not ok then
+local ok, err = pcall(buildUI)
+if ok then
+    -- 构建成功后再扫描；扫描失败也只写到框里，不影响窗口
+    local ok2, err2 = pcall(Scan)
+    if UI.box then
+        if ok2 then
+            UI.box.Text = table.concat(OUT, "\n")
+        else
+            UI.box.Text = "扫描出错：\n" .. tostring(err2)
+        end
+    end
+else
+    -- 界面建不出来时退回打印 + 剪贴板
     pcall(Scan)
     local t = table.concat(OUT, "\n")
     pcall(print, t)
     if type(setclipboard) == "function" then pcall(setclipboard, t) end
-    pcall(print, "[BtnDoctor] 界面不可用，已把报告打印并复制到剪贴板。")
 end
 
 pcall(function()
     getgenv().BtnDoctor = {
-        scan = function() pcall(Scan) local t = table.concat(OUT, "\n") if type(setclipboard) == "function" then pcall(setclipboard, t) end return t end,
+        scan = function()
+            pcall(Scan)
+            local t = table.concat(OUT, "\n")
+            if type(setclipboard) == "function" then pcall(setclipboard, t) end
+            return t
+        end,
         show = function() pcall(buildUI) end,
     }
 end)
